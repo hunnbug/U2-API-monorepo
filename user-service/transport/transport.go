@@ -35,17 +35,17 @@ func (h *UserHandler) Register(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case errs.ErrLoginAlreadyExists, errs.ErrEmailAlreadyExists, errs.ErrPhoneAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		case errs.ErrInvalidEmail, errs.ErrInvalidPhone,
 			errs.ErrInvalidPassword, errs.ErrInvalidLogin:
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сервера"})
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"status": "User created successfully"})
+	c.JSON(http.StatusCreated, gin.H{"status": "Пользователь успешно создан"})
 }
 
 func (h *UserHandler) Login(c *gin.Context) {
@@ -67,7 +67,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		case errs.ErrPasswordNotExists:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сервера"})
 		}
 		return
 	}
@@ -79,7 +79,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неправильный айди пользователя!"})
 		return
 	}
 
@@ -139,14 +139,14 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "User updated successfully"})
+	c.JSON(http.StatusOK, gin.H{"status": "Пользователь успешно обновлен!"})
 }
 
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный айди пользователя"})
 		return
 	}
 
@@ -156,7 +156,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "User deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"status": "Пользователь успешно удален!"})
 }
 
 func (h *UserHandler) GetUser(c *gin.Context) {

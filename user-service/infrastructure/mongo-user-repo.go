@@ -29,7 +29,7 @@ func (m *MongoUserRepo) Create(user domain.User) error {
 	defer cancel()
 
 	userDoc := bson.M{
-		"id":            user.ID,
+		"id":            user.ID.String(),
 		"login":         user.Login.String(),
 		"email":         user.Email.String(),
 		"phone_number":  user.PhoneNumber.String(),
