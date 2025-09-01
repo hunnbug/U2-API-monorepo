@@ -19,7 +19,6 @@ func main() {
 	if err != nil {
 		log.Println("Произошла ошибка при загрузке переменных окружения")
 	}
-	r := gin.Default()
 	db, err := mongo.Connect(options.Client().ApplyURI(os.Getenv("DATABASE")))
 	if err != nil {
 		log.Println("Произошла ошибка при подключении к базе данных")
@@ -28,5 +27,7 @@ func main() {
 	repo := infrastructure.NewMongoRepo(db)
 	service := service.NewUserService(repo)
 	handler := transport.NewUserHandler(service)
+
+	r := gin.Default()
 	handler.RegisterRoutes(r)
 }
