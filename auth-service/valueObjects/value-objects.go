@@ -36,6 +36,7 @@ func CheckAuthType(value string) AuthType {
 }
 
 func CreateValueObject(t AuthType, value string) (interface{}, error) {
+
 	switch t {
 	case EmailAuthType:
 		return NewEmail(value)
