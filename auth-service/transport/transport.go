@@ -68,17 +68,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, LoginResponse{Token: token})
 }
 
-// Logout обрабатывает выход из системы
-// @Summary Выход из системы
-// @Description Инвалидация токена пользователя
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body LogoutRequest true "Токен для инвалидации"
-// @Success 200 {object} MessageResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
-// @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 
 	var req LogoutRequest
@@ -97,18 +86,6 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, MessageResponse{Message: "Successfully logged out"})
 }
 
-// ValidateToken проверяет валидность токена
-// @Summary Проверка токена
-// @Description Проверяет валидность JWT токена
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body ValidateRequest true "Токен для проверки"
-// @Success 200 {object} MessageResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 401 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
-// @Router /auth/validate [post]
 func (h *AuthHandler) ValidateToken(c *gin.Context) {
 	var req ValidateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -127,17 +104,6 @@ func (h *AuthHandler) ValidateToken(c *gin.Context) {
 	c.JSON(http.StatusOK, MessageResponse{Message: "Token is valid"})
 }
 
-// CreateSession создает новую сессию (токен) для пользователя
-// @Summary Создание сессии
-// @Description Создает JWT токен для указанного userID
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param userID query string true "User ID"
-// @Success 200 {object} LoginResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
-// @Router /auth/session [post]
 func (h *AuthHandler) CreateSession(c *gin.Context) {
 	userID := c.Query("userID")
 	if userID == "" {
@@ -156,7 +122,6 @@ func (h *AuthHandler) CreateSession(c *gin.Context) {
 	c.JSON(http.StatusOK, LoginResponse{Token: token})
 }
 
-// Middleware для проверки аутентификации
 func (h *AuthHandler) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -166,7 +131,6 @@ func (h *AuthHandler) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Проверяем формат "Bearer <token>"
 		if len(authHeader) < 8 || authHeader[:7] != "Bearer " {
 			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid authorization format"})
 			c.Abort()
@@ -198,7 +162,6 @@ type MessageResponse struct {
 	Message string `json:"message"`
 }
 
-// Вспомогательная функция для обработки ошибок аутентификации
 func handleAuthError(c *gin.Context, err error) {
 	switch err.Error() {
 	case "invalid password", "authentication failed":

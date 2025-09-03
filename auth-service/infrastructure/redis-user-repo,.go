@@ -100,20 +100,16 @@ func (r *RedisUserRepo) GetPasswordHashByEmail(email valueObjects.Email) (string
 	return userData.Password, nil
 }
 
-// SaveToken сохраняет refresh token для пользователя
 func (r *RedisUserRepo) SaveToken(userID string, refreshToken string, expiresAt time.Time) error {
 	ctx, cancel := getContext()
 	defer cancel()
 	key := r.userTokensKey(userID)
 
-	// Используем Redis Set для хранения токенов
-	// Добавляем токен в set и устанавливаем время жизни для всего ключа
 	err := r.client.HSet(ctx, key, refreshToken, time.Now().Unix()).Err()
 	if err != nil {
 		return fmt.Errorf("redis sadd error: %w", err)
 	}
 
-	// Устанавливаем время жизни для всего set'а токенов пользователя
 	err = r.client.ExpireAt(ctx, key, expiresAt).Err()
 	if err != nil {
 		return fmt.Errorf("redis expire error: %w", err)
@@ -122,13 +118,11 @@ func (r *RedisUserRepo) SaveToken(userID string, refreshToken string, expiresAt 
 	return nil
 }
 
-// FindToken проверяет существование refresh token для пользователя
 func (r *RedisUserRepo) FindToken(userID string, refreshToken string) (bool, error) {
 	ctx, cancel := getContext()
 	defer cancel()
 	key := r.userTokensKey(userID)
 
-	// Проверяем, есть ли токен в set'е
 	exists, err := r.client.HExists(ctx, key, refreshToken).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -140,13 +134,11 @@ func (r *RedisUserRepo) FindToken(userID string, refreshToken string) (bool, err
 	return exists, nil
 }
 
-// DeleteToken удаляет конкретный refresh token
 func (r *RedisUserRepo) DeleteToken(userID string, refreshToken string) error {
 	ctx, cancel := getContext()
 	defer cancel()
 	key := r.userTokensKey(userID)
 
-	// Удаляем токен из set'а
 	err := r.client.HDel(ctx, key, refreshToken).Err()
 	if err != nil {
 		return fmt.Errorf("redis srem error: %w", err)
@@ -155,13 +147,11 @@ func (r *RedisUserRepo) DeleteToken(userID string, refreshToken string) error {
 	return nil
 }
 
-// DeleteAllTokens удаляет все refresh tokens для пользователя
 func (r *RedisUserRepo) DeleteAllTokens(userID string) error {
 	ctx, cancel := getContext()
 	defer cancel()
 	key := r.userTokensKey(userID)
 
-	// Просто удаляем весь ключ
 	err := r.client.Del(ctx, key).Err()
 	if err != nil {
 		return fmt.Errorf("redis del error: %w", err)
