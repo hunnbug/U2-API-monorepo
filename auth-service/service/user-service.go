@@ -96,7 +96,7 @@ func (s *userService) CreateSession(ctx context.Context, userID string) (string,
 }
 
 func (s *userService) Logout(ctx context.Context, token string) error {
-	claims, err := s.validateTokenAndGetClaims(token)
+	claims, err := s.ValidateTokenAndGetClaims(token)
 	if err != nil {
 		return err
 	}
@@ -115,11 +115,11 @@ func (s *userService) ValidateToken(ctx context.Context, token string) error {
 		delete(s.tokenBlacklist, token)
 	}
 
-	_, err := s.validateTokenAndGetClaims(token)
+	_, err := s.ValidateTokenAndGetClaims(token)
 	return err
 }
 
-func (s *userService) validateTokenAndGetClaims(token string) (jwt.MapClaims, error) {
+func (s *userService) ValidateTokenAndGetClaims(token string) (jwt.MapClaims, error) {
 	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -150,15 +150,22 @@ func (s *userService) validateTokenAndGetClaims(token string) (jwt.MapClaims, er
 }
 
 func (s *userService) GetUserIDFromToken(token string) (string, error) {
-	claims, err := s.validateTokenAndGetClaims(token)
+	claims, err := s.ValidateTokenAndGetClaims(token)
 	if err != nil {
 		return "", err
 	}
 
-	userID, ok := claims["user_id"].(string)
+	// Правильное извлечение user_id
+	userID, ok := claims["user_id"]
 	if !ok {
-		return "", errors.New("user_id not found in token")
+		return "", errors.New("user_id not found in token claims")
 	}
 
-	return userID, nil
+	// Приведение типа
+	userIDStr, ok := userID.(string)
+	if !ok {
+		return "", errors.New("user_id is not a string")
+	}
+
+	return userIDStr, nil
 }

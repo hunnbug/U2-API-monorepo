@@ -139,14 +139,24 @@ func (h *AuthHandler) AuthMiddleware() gin.HandlerFunc {
 
 		token := authHeader[7:] // Убираем "Bearer " префикс
 
-		ctx, cancel := getContext()
-		defer cancel()
+		// ctx, cancel := getContext()
+		// defer cancel()
 
-		if err := h.userService.ValidateToken(ctx, token); err != nil {
+		// if err := h.userService.ValidateToken(ctx, token); err != nil {
+		// 	c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid token"})
+		// 	c.Abort()
+		// 	return
+		// }
+
+		claims, err := h.userService.ValidateTokenAndGetClaims(token)
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid token"})
 			c.Abort()
 			return
 		}
+
+		c.Set("token_claims", claims)
+		c.Set("auth_token", token)
 
 		// Токен валиден, продолжаем обработку
 		c.Next()
