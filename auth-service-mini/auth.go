@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -30,7 +31,7 @@ func login(c *gin.Context) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"exp": time.Now().Add(10 * time.Second).Unix(), // поменять время истечения токена
+		"exp": time.Now().Add(40 * time.Second).Unix(), // поменять время истечения токена
 	})
 
 	tokenString, err := token.SignedString(jwtSecret)
@@ -42,19 +43,25 @@ func login(c *gin.Context) {
 }
 
 func authMiddleWare(c *gin.Context) {
+
 	authHeader := c.GetHeader("AuthHeader")
+
+	log.Println(authHeader)
 	if authHeader == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Ошибка, проблема с авторизацией"})
 		c.Abort()
 		return
 	}
 
-	tokenString := authHeader[:7]
+	tokenString := authHeader[7:]
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
 		return jwtSecret, nil
 	})
 
+	time, _ := token.Claims.GetExpirationTime()
+	log.Println(time)
 	if err != nil || !token.Valid {
+		log.Println("Произошла проблема при валидации токена |", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Проблема с авторизацией"})
 		c.Abort()
 		return
