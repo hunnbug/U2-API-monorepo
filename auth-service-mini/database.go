@@ -74,3 +74,16 @@ func getPasswordHashFromRedis(credType string, identifier string) (string, error
 
 	return storedHash, nil
 }
+
+func saveShitToRedis(login, email, phone, password string) {
+	ctx := context.Background()
+
+	key := fmt.Sprintf("auth:login:%s", login)
+	redisClient.Set(ctx, key, password, 0)
+
+	key = fmt.Sprintf("auth:email:%s", login)
+	redisClient.Set(ctx, key, password, 0)
+
+	key = fmt.Sprintf("auth:phone:%s", login)
+	redisClient.Set(ctx, key, password, 0)
+}

@@ -1,6 +1,9 @@
 package service
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
 	"user-service/domain"
 	errs "user-service/errors"
 	"user-service/valueObjects"
@@ -50,6 +53,23 @@ func (s UserServiceImpl) Register(login, email, phone, password string) error {
 	}
 
 	user := domain.NewUser(loginVO, passwordVO, phoneVO, emailVO)
+	var userStrings struct {
+		Login    string
+		Email    string
+		Phone    string
+		Password string
+	}
+	userStrings.Email = user.Email.String()
+	userStrings.Phone = user.PhoneNumber.String()
+	userStrings.Login = user.Login.String()
+	userStrings.Password = user.PasswordHash.String()
+
+	dataToSend, err := json.Marshal(userStrings)
+	if err != nil {
+		return err
+	}
+
+	http.Post("http://localhost:8001", "application/json", bytes.NewBuffer(dataToSend))
 
 	return s.repo.Create(user)
 }
