@@ -52,7 +52,7 @@ func (m *MongoUserRepo) Delete(id uuid.UUID) error {
 	ctx, cancel := m.GetContext()
 	defer cancel()
 
-	_, err := m.collection.DeleteOne(ctx, bson.M{"id": id})
+	_, err := m.collection.DeleteOne(ctx, bson.M{"id": id.String()})
 	return err
 }
 

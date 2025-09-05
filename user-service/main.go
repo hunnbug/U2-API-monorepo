@@ -20,6 +20,7 @@ func main() {
 		log.Println("Произошла ошибка при загрузке переменных окружения", err)
 	}
 	db, err := mongo.Connect(options.Client().ApplyURI(os.Getenv("DATABASE")))
+	log.Println("Подключение к БД произошло успешно")
 	if err != nil {
 		log.Println("Произошла ошибка при подключении к базе данных", err)
 	}
@@ -30,6 +31,7 @@ func main() {
 
 	r := gin.Default()
 	handler.RegisterRoutes(r)
+	log.Println("gin проининциализирован")
 	err = r.Run("127.0.0.1:8080")
 	if err != nil {
 		log.Println("Не удалось запустить сервер", err)

@@ -69,7 +69,7 @@ func (s UserServiceImpl) Register(login, email, phone, password string) error {
 		return err
 	}
 
-	http.Post("http://localhost:8001", "application/json", bytes.NewBuffer(dataToSend))
+	http.Post("http://localhost:8001/userReg", "application/json", bytes.NewBuffer(dataToSend))
 
 	return s.repo.Create(user)
 }

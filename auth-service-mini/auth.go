@@ -11,6 +11,7 @@ import (
 var jwtSecret = []byte("pidorok-key")
 
 func login(c *gin.Context) {
+
 	var request struct {
 		Creds    string
 		Value    string

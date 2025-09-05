@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -15,7 +16,7 @@ var redisClient *redis.Client
 func initDatabase() error {
 
 	redisClient = redis.NewClient(&redis.Options{
-		Addr:     "localhost:5678",
+		Addr:     os.Getenv("DATABASE_ADDRESS"),
 		Password: "",
 		DB:       0,
 	})
@@ -59,10 +60,13 @@ func getPasswordHashFromRedis(credType string, identifier string) (string, error
 	switch credType {
 	case "email":
 		redisKey = "auth:email:" + identifier
+		log.Println("auth:email:", identifier)
 	case "login":
 		redisKey = "auth:login:" + identifier
+		log.Println("auth:login:", identifier)
 	case "phone":
 		redisKey = "auth:phone:" + identifier
+		log.Println("auth:phone:", identifier)
 	default:
 		return "", fmt.Errorf("invalid credential type: %s", credType)
 	}
@@ -79,11 +83,14 @@ func saveShitToRedis(login, email, phone, password string) {
 	ctx := context.Background()
 
 	key := fmt.Sprintf("auth:login:%s", login)
+	log.Println("добавляем:", key)
 	redisClient.Set(ctx, key, password, 0)
 
-	key = fmt.Sprintf("auth:email:%s", login)
+	key = fmt.Sprintf("auth:email:%s", email)
+	log.Println("добавляем:", key)
 	redisClient.Set(ctx, key, password, 0)
 
-	key = fmt.Sprintf("auth:phone:%s", login)
+	key = fmt.Sprintf("auth:phone:%s", phone)
+	log.Println("добавляем:", key)
 	redisClient.Set(ctx, key, password, 0)
 }
