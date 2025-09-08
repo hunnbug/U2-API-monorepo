@@ -42,7 +42,7 @@ func login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
-func authMiddleWare(c *gin.Context) {
+func authMiddleware(c *gin.Context) {
 
 	authHeader := c.GetHeader("AuthHeader")
 
@@ -81,7 +81,7 @@ func authMiddleWare(c *gin.Context) {
 
 func verifyToken(c *gin.Context) {
 
-	authMiddleWare(c)
+	authMiddleware(c)
 	if c.IsAborted() {
 		return
 	}

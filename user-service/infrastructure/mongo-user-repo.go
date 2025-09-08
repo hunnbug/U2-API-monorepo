@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"context"
+	"log"
 	"time"
 	"user-service/domain"
 
@@ -44,7 +45,25 @@ func (m *MongoUserRepo) Update(id uuid.UUID, update domain.UserUpdate) error {
 	ctx, cancel := m.GetContext()
 	defer cancel()
 
-	_, err := m.collection.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": update.FieldsToUpdate})
+	changed := bson.M{}
+	for k, v := range update.FieldsToUpdate {
+		log.Printf("обновляется поле %s на знеачение %s\n", k, v)
+		changed[k] = v
+	}
+	updateBson := bson.M{"$set": changed}
+
+	for k, v := range changed {
+		log.Printf("key %s value %s\n", k, v)
+	}
+
+	for k, v := range updateBson {
+		log.Printf("ket %s value %s", k, v)
+	}
+
+	log.Println("обновляем документ с id:", id)
+
+	result, err := m.collection.UpdateOne(ctx, bson.M{"id": id.String()}, updateBson)
+	log.Printf("Найдено документов %d, обновлено %d\n", result.MatchedCount, result.ModifiedCount)
 	return err
 }
 

@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"log"
 	"net/http"
 	"user-service/domain"
 	errs "user-service/errors"
@@ -103,6 +104,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		log.Println("данные на обновление:", request.Login)
 		opts = append(opts, domain.WithLogin(loginVO))
 	}
 
@@ -112,6 +114,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		log.Println("данные на обновление:", request.Email)
 		opts = append(opts, domain.WithEmail(emailVO))
 	}
 
@@ -121,6 +124,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		log.Println("данные на обновление:", request.Phone)
 		opts = append(opts, domain.WithPhone(phoneVO))
 	}
 
@@ -130,6 +134,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		log.Println("данные на обновление:", request.Password)
 		opts = append(opts, domain.WithPassword(passwordVO))
 	}
 
