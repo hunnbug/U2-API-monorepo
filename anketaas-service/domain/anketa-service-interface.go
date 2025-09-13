@@ -13,5 +13,5 @@ type AnketaService interface {
 	) error
 	GetAnketaByID(id uuid.UUID) (Anketa, error)
 	Delete(id uuid.UUID) error
-	Update(anketa *Anketa) error
+	Update(update map[string]any) error
 }
