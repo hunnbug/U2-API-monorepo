@@ -44,7 +44,9 @@ func (h *AnketaHandler) CreateAnketa(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
 	err := h.service.Create(
+		ctx,
 		req.Username,
 		req.Gender,
 		req.PreferredGender,
@@ -74,7 +76,8 @@ func (h *AnketaHandler) GetAnketaByID(c *gin.Context) {
 		return
 	}
 
-	anketa, err := h.service.GetAnketaByID(id)
+	ctx := c.Request.Context()
+	anketa, err := h.service.GetAnketaByID(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -115,7 +118,8 @@ func (h *AnketaHandler) UpdateAnketa(c *gin.Context) {
 	// ID обязательно для обновления
 	updateData["id"] = req.ID
 
-	err := h.service.Update(updateData)
+	ctx := c.Request.Context()
+	err := h.service.Update(ctx, updateData)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Не удалось обновить анкету"})
@@ -138,7 +142,8 @@ func (h *AnketaHandler) DeleteAnketa(c *gin.Context) {
 		return
 	}
 
-	err = h.service.Delete(id)
+	ctx := c.Request.Context()
+	err = h.service.Delete(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Ошибка при удалении анкеты"})

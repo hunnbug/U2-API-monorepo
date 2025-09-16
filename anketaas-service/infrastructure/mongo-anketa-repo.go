@@ -107,3 +107,30 @@ func (r *MongoAnketaRepo) FindByID(id uuid.UUID) (domain.Anketa, error) {
 
 	return anketa, nil
 }
+
+func (r *MongoAnketaRepo) GetAnketas(pref domain.PreferredAnketaGender, limit int) ([]domain.Anketa, error) {
+
+	ctx, cancel := getContext()
+	defer cancel()
+
+	cursor, err := r.collection.Find(ctx, bson.M{"preferred_gender": pref})
+	if err != nil {
+		return []domain.Anketa{}, err
+	}
+
+	var anketas []domain.Anketa
+	count := 0
+	for cursor.Next(ctx) && count <= 10 {
+		count++
+
+		var anketa domain.Anketa
+		err := cursor.Decode(&anketa)
+		if err != nil {
+			return []domain.Anketa{}, err
+		}
+
+		anketas = append(anketas, anketa)
+	}
+
+	return anketas, nil
+}

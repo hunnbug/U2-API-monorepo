@@ -3,6 +3,7 @@ package service
 import (
 	"anketas-service/anketaas-service/domain"
 	"anketas-service/anketaas-service/valueObjects"
+	"context"
 	"errors"
 	"fmt"
 
@@ -29,6 +30,7 @@ var (
 )
 
 func (s *AnketaService) Create(
+	ctx context.Context,
 	username string,
 	gender string,
 	preferredGender string,
@@ -80,29 +82,29 @@ func (s *AnketaService) Create(
 		Photos:          validatedPhotos,
 	}
 
-	if err := s.repo.Create(anketa); err != nil {
+	if err := s.repo.Create(ctx, anketa); err != nil {
 		return fmt.Errorf("ошибка при создании анкеты: %w", err)
 	}
 
 	return nil
 }
 
-func (s *AnketaService) GetAnketaByID(id uuid.UUID) (domain.Anketa, error) {
-	anketa, err := s.repo.FindByID(id)
+func (s *AnketaService) GetAnketaByID(ctx context.Context, id uuid.UUID) (domain.Anketa, error) {
+	anketa, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return domain.Anketa{}, fmt.Errorf("ошибка при получении анкеты: %w", err)
 	}
 	return anketa, nil
 }
 
-func (s *AnketaService) Delete(id uuid.UUID) error {
-	if err := s.repo.Delete(id); err != nil {
+func (s *AnketaService) Delete(ctx context.Context, id uuid.UUID) error {
+	if err := s.repo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("ошибка при удалении анкеты: %w", err)
 	}
 	return nil
 }
 
-func (s *AnketaService) Update(updateData map[string]interface{}) error {
+func (s *AnketaService) Update(ctx context.Context, updateData map[string]interface{}) error {
 
 	idValue, exists := updateData["id"]
 	if !exists {
@@ -129,7 +131,7 @@ func (s *AnketaService) Update(updateData map[string]interface{}) error {
 		return err
 	}
 
-	if err := s.repo.Update(id, updateData); err != nil {
+	if err := s.repo.Update(ctx, id, updateData); err != nil {
 		return fmt.Errorf("ошибка при обновлении анкеты: %w", err)
 	}
 
@@ -199,4 +201,15 @@ func (s *AnketaService) validateUpdateData(updateData map[string]interface{}) er
 	}
 
 	return nil
+}
+
+func (s *AnketaService) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender, limit int) ([]domain.Anketa, error) {
+
+	anketas, err := s.repo.GetAnketas(ctx, pref, limit)
+	if err != nil {
+		return []domain.Anketa{}, err
+	}
+
+	return anketas, nil
+
 }
