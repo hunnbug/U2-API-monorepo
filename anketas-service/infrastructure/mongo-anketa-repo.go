@@ -1,8 +1,8 @@
 package infrastructure
 
 import (
-	"anketas-service/anketaas-service/domain"
-	errs "anketas-service/anketaas-service/errors"
+	"anketas-service/domain"
+	errs "anketas-service/errors"
 	"context"
 	"log"
 	"time"

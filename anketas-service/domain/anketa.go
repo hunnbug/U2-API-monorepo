@@ -1,8 +1,8 @@
 package domain
 
 import (
-	errs "anketas-service/anketaas-service/errors"
-	"anketas-service/anketaas-service/valueObjects"
+	errs "anketas-service/errors"
+	"anketas-service/valueObjects"
 	"strings"
 
 	"github.com/google/uuid"

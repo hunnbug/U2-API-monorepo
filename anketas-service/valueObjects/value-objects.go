@@ -1,7 +1,7 @@
 package valueObjects
 
 import (
-	errs "anketas-service/anketaas-service/errors"
+	errs "anketas-service/errors"
 	"fmt"
 	"regexp"
 )

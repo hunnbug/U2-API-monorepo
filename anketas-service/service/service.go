@@ -1,8 +1,8 @@
 package service
 
 import (
-	"anketas-service/anketaas-service/domain"
-	"anketas-service/anketaas-service/valueObjects"
+	"anketas-service/domain"
+	"anketas-service/valueObjects"
 	"context"
 	"errors"
 	"fmt"

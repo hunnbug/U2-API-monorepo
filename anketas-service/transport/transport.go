@@ -1,8 +1,8 @@
 package transport
 
 import (
-	"anketas-service/anketaas-service/domain"
-	errs "anketas-service/anketaas-service/errors"
+	"anketas-service/domain"
+	errs "anketas-service/errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
