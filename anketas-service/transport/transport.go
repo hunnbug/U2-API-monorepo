@@ -154,3 +154,10 @@ func (h *AnketaHandler) DeleteAnketa(c *gin.Context) {
 		"message": "Анкета успешно удалена",
 	})
 }
+
+func (h *AnketaHandler) RegisterRoutes(r *gin.Engine) {
+	r.POST("/create", h.CreateAnketa)
+	r.GET("/anketa/:id", h.GetAnketaByID)
+	r.PUT("/anketa/:id", h.UpdateAnketa)
+	r.DELETE("/anketa/:id", h.DeleteAnketa)
+}

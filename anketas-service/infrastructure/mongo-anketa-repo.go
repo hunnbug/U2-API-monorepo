@@ -5,7 +5,6 @@ import (
 	errs "anketas-service/errors"
 	"context"
 	"log"
-	"time"
 
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -22,14 +21,7 @@ func NewAnketaRepo(db *mongo.Client) *MongoAnketaRepo {
 	}
 }
 
-func getContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), time.Second*10)
-}
-
-func (r *MongoAnketaRepo) Create(anketa domain.Anketa) error {
-
-	ctx, cancel := getContext()
-	defer cancel()
+func (r *MongoAnketaRepo) Create(ctx context.Context, anketa domain.Anketa) error {
 
 	doc := bson.M{
 		"id":               anketa.ID,
@@ -50,10 +42,7 @@ func (r *MongoAnketaRepo) Create(anketa domain.Anketa) error {
 	return nil
 }
 
-func (r *MongoAnketaRepo) Update(id uuid.UUID, updateData map[string]any) error {
-
-	ctx, cancel := getContext()
-	defer cancel()
+func (r *MongoAnketaRepo) Update(ctx context.Context, id uuid.UUID, updateData map[string]any) error {
 
 	filter := bson.M{"_id": id.String()}
 	update := bson.M{"$set": updateData}
@@ -71,10 +60,7 @@ func (r *MongoAnketaRepo) Update(id uuid.UUID, updateData map[string]any) error 
 	return nil
 }
 
-func (r *MongoAnketaRepo) Delete(id uuid.UUID) error {
-
-	ctx, cancel := getContext()
-	defer cancel()
+func (r *MongoAnketaRepo) Delete(ctx context.Context, id uuid.UUID) error {
 
 	filter := bson.M{"id": id.String()}
 
@@ -91,10 +77,7 @@ func (r *MongoAnketaRepo) Delete(id uuid.UUID) error {
 	return nil
 }
 
-func (r *MongoAnketaRepo) FindByID(id uuid.UUID) (domain.Anketa, error) {
-
-	ctx, cancel := getContext()
-	defer cancel()
+func (r *MongoAnketaRepo) FindByID(ctx context.Context, id uuid.UUID) (domain.Anketa, error) {
 
 	filter := bson.M{"id": id.String()}
 
@@ -108,10 +91,7 @@ func (r *MongoAnketaRepo) FindByID(id uuid.UUID) (domain.Anketa, error) {
 	return anketa, nil
 }
 
-func (r *MongoAnketaRepo) GetAnketas(pref domain.PreferredAnketaGender, limit int) ([]domain.Anketa, error) {
-
-	ctx, cancel := getContext()
-	defer cancel()
+func (r *MongoAnketaRepo) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender, limit int) ([]domain.Anketa, error) {
 
 	cursor, err := r.collection.Find(ctx, bson.M{"preferred_gender": pref})
 	if err != nil {

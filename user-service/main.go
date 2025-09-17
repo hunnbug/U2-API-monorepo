@@ -20,10 +20,10 @@ func main() {
 		log.Println("Произошла ошибка при загрузке переменных окружения", err)
 	}
 	db, err := mongo.Connect(options.Client().ApplyURI(os.Getenv("DATABASE")))
-	log.Println("Подключение к БД произошло успешно")
 	if err != nil {
 		log.Println("Произошла ошибка при подключении к базе данных", err)
 	}
+	log.Println("Подключение к БД произошло успешно")
 
 	repo := infrastructure.NewMongoRepo(db)
 	service := service.NewUserService(repo)

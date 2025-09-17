@@ -29,7 +29,7 @@ var (
 	ErrInvalidUsername        = errors.New("неверный юзернейм")
 )
 
-func (s *AnketaService) Create(
+func (s AnketaService) Create(
 	ctx context.Context,
 	username string,
 	gender string,
@@ -89,7 +89,7 @@ func (s *AnketaService) Create(
 	return nil
 }
 
-func (s *AnketaService) GetAnketaByID(ctx context.Context, id uuid.UUID) (domain.Anketa, error) {
+func (s AnketaService) GetAnketaByID(ctx context.Context, id uuid.UUID) (domain.Anketa, error) {
 	anketa, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return domain.Anketa{}, fmt.Errorf("ошибка при получении анкеты: %w", err)
@@ -97,14 +97,14 @@ func (s *AnketaService) GetAnketaByID(ctx context.Context, id uuid.UUID) (domain
 	return anketa, nil
 }
 
-func (s *AnketaService) Delete(ctx context.Context, id uuid.UUID) error {
+func (s AnketaService) Delete(ctx context.Context, id uuid.UUID) error {
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("ошибка при удалении анкеты: %w", err)
 	}
 	return nil
 }
 
-func (s *AnketaService) Update(ctx context.Context, updateData map[string]interface{}) error {
+func (s AnketaService) Update(ctx context.Context, updateData map[string]interface{}) error {
 
 	idValue, exists := updateData["id"]
 	if !exists {
@@ -138,7 +138,7 @@ func (s *AnketaService) Update(ctx context.Context, updateData map[string]interf
 	return nil
 }
 
-func (s *AnketaService) validateUpdateData(updateData map[string]interface{}) error {
+func (s AnketaService) validateUpdateData(updateData map[string]interface{}) error {
 	for key, value := range updateData {
 		switch key {
 		case "username":
@@ -203,7 +203,7 @@ func (s *AnketaService) validateUpdateData(updateData map[string]interface{}) er
 	return nil
 }
 
-func (s *AnketaService) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender, limit int) ([]domain.Anketa, error) {
+func (s AnketaService) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender, limit int) ([]domain.Anketa, error) {
 
 	anketas, err := s.repo.GetAnketas(ctx, pref, limit)
 	if err != nil {
