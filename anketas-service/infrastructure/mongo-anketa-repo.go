@@ -3,7 +3,9 @@ package infrastructure
 import (
 	"anketas-service/domain"
 	errs "anketas-service/errors"
+	"anketas-service/valueObjects"
 	"context"
+	"errors"
 	"log"
 
 	"github.com/google/uuid"
@@ -23,28 +25,41 @@ func NewAnketaRepo(db *mongo.Client) *MongoAnketaRepo {
 
 func (r *MongoAnketaRepo) Create(ctx context.Context, anketa domain.Anketa) error {
 
+	log.Println("Репозиторий начал создание анкеты")
+
+	tags := make([]string, 0, 10)
+	photos := make([]string, 0, 3)
+	for _, photo := range anketa.Photos {
+		photos = append(photos, photo.Url)
+	}
+	for _, tag := range anketa.Tags {
+		tags = append(tags, tag.Value)
+	}
 	doc := bson.M{
-		"id":               anketa.ID,
-		"username":         anketa.Username,
-		"gender":           anketa.Gender,
-		"preferred_gender": anketa.PreferredGender,
+		"id":               anketa.ID.String(),
+		"username":         anketa.Username.Value,
+		"gender":           anketa.Gender.Value,
+		"preferred_gender": anketa.PreferredGender.Value,
 		"description":      anketa.Description,
-		"tags":             anketa.Tags,
-		"photos":           anketa.Photos,
+		"tags":             tags,
+		"photos":           photos,
 	}
 
 	_, err := r.collection.InsertOne(ctx, doc)
 	if err != nil {
-		log.Println("Не удалось создать анкету", err)
-		return err
+		log.Println("Не удалось создать анкету")
+		return errors.New("Произошла внутренняя ошибка сервера при создании анкеты. Приносим свои извинения")
 	}
+
+	log.Println("Репозиторий успешно создал анкету")
 
 	return nil
 }
 
 func (r *MongoAnketaRepo) Update(ctx context.Context, id uuid.UUID, updateData map[string]any) error {
 
-	filter := bson.M{"_id": id.String()}
+	log.Println("Репозиторий начал обновление анкеты")
+	filter := bson.M{"id": id.String()}
 	update := bson.M{"$set": updateData}
 
 	result, err := r.collection.UpdateOne(ctx, filter, update)
@@ -54,6 +69,7 @@ func (r *MongoAnketaRepo) Update(ctx context.Context, id uuid.UUID, updateData m
 	}
 
 	if result.MatchedCount == 0 {
+		log.Println("Не найдено ни одной анкеты с таким айди:", id.String())
 		return errs.InternalServerError
 	}
 
@@ -81,12 +97,68 @@ func (r *MongoAnketaRepo) FindByID(ctx context.Context, id uuid.UUID) (domain.An
 
 	filter := bson.M{"id": id.String()}
 
-	var anketa domain.Anketa
-	err := r.collection.FindOne(ctx, filter).Decode(&anketa)
+	var anketaDTO struct {
+		Username        string   `bson:"username"`
+		Gender          string   `bson:"gender"`
+		PreferredGender string   `bson:"preferred_gender"`
+		Description     string   `bson:"description"`
+		Tags            []string `bson:"tags"`
+		Photos          []string `bson:"photos"`
+	}
+
+	err := r.collection.FindOne(ctx, filter).Decode(&anketaDTO)
 	if err != nil {
-		log.Println("Не удалось найти пользователя по айди", id, err)
+		log.Println("Не удалось найти пользователя по айди", id.String(), err)
+		return domain.Anketa{}, errs.InternalServerError
+	}
+
+	log.Println("anketaDTO repo:", anketaDTO)
+
+	tagsArray := make([]domain.Tag, 0, 10)
+	photosArray := make([]domain.Photo, 0, 3)
+	for _, tag := range anketaDTO.Tags {
+		valueObjectTag, err := domain.NewTag(tag)
+		if err != nil {
+			log.Println("Неверный формат тэга")
+			return domain.Anketa{}, err
+		}
+		tagsArray = append(tagsArray, valueObjectTag)
+	}
+	for _, photo := range anketaDTO.Photos {
+		valueObjectPhoto, err := domain.NewPhoto(photo)
+		if err != nil {
+			log.Println("Неверный формат ссылки на фото")
+			return domain.Anketa{}, err
+		}
+		photosArray = append(photosArray, valueObjectPhoto)
+	}
+	username, err := valueObjects.NewUsername(anketaDTO.Username)
+	if err != nil {
+		log.Println("Неверный формат юзернейма")
 		return domain.Anketa{}, err
 	}
+	gender, err := domain.NewAnketaGender(anketaDTO.Gender)
+	if err != nil {
+		log.Println("Неверный формат пола")
+		return domain.Anketa{}, err
+	}
+	preferredGender, err := domain.NewPreferredAnketaGender(anketaDTO.PreferredGender)
+	if err != nil {
+		log.Println("Неверный формат предпочитаемого пола в поиске")
+		return domain.Anketa{}, err
+	}
+
+	anketa := domain.Anketa{
+		ID:              id,
+		Username:        username,
+		Gender:          gender,
+		PreferredGender: preferredGender,
+		Description:     anketaDTO.Description,
+		Tags:            tagsArray,
+		Photos:          photosArray,
+	}
+
+	log.Println("anketa:", anketa)
 
 	return anketa, nil
 }

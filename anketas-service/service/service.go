@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 )
@@ -39,6 +40,8 @@ func (s AnketaService) Create(
 	photos []string,
 ) error {
 
+	log.Println("Сервис начал создание анкеты")
+
 	usernameVO, err := valueObjects.NewUsername(username)
 	if err != nil {
 		return fmt.Errorf("неверное имя пользователя: %w", err)
@@ -46,7 +49,7 @@ func (s AnketaService) Create(
 
 	anketaGender, err := domain.NewAnketaGender(gender)
 	if err != nil {
-		return fmt.Errorf("неверный пол: %w", err)
+		return fmt.Errorf("неверный пол")
 	}
 
 	preferredAnketaGender, err := domain.NewPreferredAnketaGender(preferredGender)
@@ -82,6 +85,8 @@ func (s AnketaService) Create(
 		Photos:          validatedPhotos,
 	}
 
+	log.Println("Сервисный слой создал анкету успешно")
+
 	if err := s.repo.Create(ctx, anketa); err != nil {
 		return fmt.Errorf("ошибка при создании анкеты: %w", err)
 	}
@@ -106,9 +111,11 @@ func (s AnketaService) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (s AnketaService) Update(ctx context.Context, updateData map[string]interface{}) error {
 
+	log.Println("Сервис начал обновление анкеты")
+
 	idValue, exists := updateData["id"]
 	if !exists {
-		return ErrAnketaIDRequired
+		return errors.New("Проблема при получении ID анкеты")
 	}
 
 	var id uuid.UUID
@@ -116,13 +123,13 @@ func (s AnketaService) Update(ctx context.Context, updateData map[string]interfa
 	case string:
 		parsedID, err := uuid.Parse(v)
 		if err != nil {
-			return fmt.Errorf("неверный формат UUID: %w", err)
+			return fmt.Errorf("Проблема при получении ID анкеты")
 		}
 		id = parsedID
 	case uuid.UUID:
 		id = v
 	default:
-		return ErrInvalidAnketaID
+		return fmt.Errorf("Проблема при получении ID анкеты")
 	}
 
 	delete(updateData, "id")
@@ -131,9 +138,13 @@ func (s AnketaService) Update(ctx context.Context, updateData map[string]interfa
 		return err
 	}
 
+	log.Println("Данные для обновления верны")
+
 	if err := s.repo.Update(ctx, id, updateData); err != nil {
-		return fmt.Errorf("ошибка при обновлении анкеты: %w", err)
+		return err
 	}
+
+	log.Println("Сервис завершил обновление анкеты")
 
 	return nil
 }

@@ -33,7 +33,7 @@ const (
 )
 
 type PreferredAnketaGender struct {
-	value string
+	Value string
 }
 
 func NewPreferredAnketaGender(value string) (PreferredAnketaGender, error) {
@@ -46,12 +46,12 @@ func NewPreferredAnketaGender(value string) (PreferredAnketaGender, error) {
 }
 
 type Tag struct {
-	value string
+	Value string
 }
 
 func NewTag(value string) (Tag, error) {
 	switch value {
-	case "Asdd": // поменять на реальные
+	case "Asdd", "jsad": // поменять на реальные
 		return Tag{value}, nil
 	default:
 		return Tag{}, errs.ErrInvalidTag
@@ -59,7 +59,7 @@ func NewTag(value string) (Tag, error) {
 }
 
 type Photo struct {
-	url string
+	Url string
 }
 
 func NewPhoto(url string) (Photo, error) {
@@ -79,19 +79,3 @@ type Anketa struct {
 	Tags            []Tag
 	Photos          []Photo
 }
-
-// func NewUser(login valueObjects.Login, password valueObjects.Password, phone valueObjects.Phone, email valueObjects.Email) User {
-// 	id := uuid.New()
-// 	return User{
-// 		id,
-// 		login,
-// 		password,
-// 		phone,
-// 		email,
-// 	}
-// }
-
-// func (u *User) CheckPassword(password string) bool {
-// 	err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash.String()), []byte(password))
-// 	return err == nil
-// }

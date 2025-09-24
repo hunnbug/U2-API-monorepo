@@ -26,6 +26,8 @@ func main() {
 		log.Println("Произошла проблема при подключении к БД |", err)
 	}
 
+	log.Println("Подключение к БД прошло успешно")
+
 	repo := infrastructure.NewAnketaRepo(db)
 	service := service.NewAnketaService(repo)
 	handler := transport.NewAnketaHandler(service)

@@ -7,7 +7,7 @@ import (
 )
 
 type Username struct {
-	value string
+	Value string
 }
 
 func NewUsername(value string) (Username, error) {

@@ -3,6 +3,8 @@ package transport
 import (
 	"anketas-service/domain"
 	errs "anketas-service/errors"
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -27,7 +29,6 @@ type CreateAnketaRequest struct {
 }
 
 type UpdateAnketaRequest struct {
-	ID              string   `json:"id" binding:"required"`
 	Username        string   `json:"username,omitempty"`
 	Gender          string   `json:"gender,omitempty"`
 	PreferredGender string   `json:"preferred_gender,omitempty"`
@@ -40,7 +41,8 @@ func (h *AnketaHandler) CreateAnketa(c *gin.Context) {
 	var req CreateAnketaRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errs.InternalServerError})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errs.InternalServerError.Error()})
+		log.Println("Произошла ошибка при биндинге структуры запроса создания анкеты |", err)
 		return
 	}
 
@@ -115,14 +117,13 @@ func (h *AnketaHandler) UpdateAnketa(c *gin.Context) {
 		updateData["photos"] = req.Photos
 	}
 
-	// ID обязательно для обновления
-	updateData["id"] = req.ID
+	updateData["id"] = c.Param("id")
 
 	ctx := c.Request.Context()
 	err := h.service.Update(ctx, updateData)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Не удалось обновить анкету"})
+			"error": fmt.Sprintf("Не удалось обновить анкету | %s", err.Error())})
 		return
 	}
 
