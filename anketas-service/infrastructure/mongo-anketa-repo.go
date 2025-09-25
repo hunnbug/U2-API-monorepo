@@ -38,6 +38,7 @@ func (r *MongoAnketaRepo) Create(ctx context.Context, anketa domain.Anketa) erro
 	doc := bson.M{
 		"id":               anketa.ID.String(),
 		"username":         anketa.Username.Value,
+		"age":              anketa.Age.Int(),
 		"gender":           anketa.Gender.Value,
 		"preferred_gender": anketa.PreferredGender.Value,
 		"description":      anketa.Description,
@@ -99,6 +100,7 @@ func (r *MongoAnketaRepo) FindByID(ctx context.Context, id uuid.UUID) (domain.An
 
 	var anketaDTO struct {
 		Username        string   `bson:"username"`
+		Age             int      `bson:"age"`
 		Gender          string   `bson:"gender"`
 		PreferredGender string   `bson:"preferred_gender"`
 		Description     string   `bson:"description"`
@@ -111,6 +113,8 @@ func (r *MongoAnketaRepo) FindByID(ctx context.Context, id uuid.UUID) (domain.An
 		log.Println("Не удалось найти пользователя по айди", id.String(), err)
 		return domain.Anketa{}, errs.InternalServerError
 	}
+
+	anketaDTO.Username = anketaDTO.Username[1:]
 
 	log.Println("anketaDTO repo:", anketaDTO)
 
@@ -147,10 +151,16 @@ func (r *MongoAnketaRepo) FindByID(ctx context.Context, id uuid.UUID) (domain.An
 		log.Println("Неверный формат предпочитаемого пола в поиске")
 		return domain.Anketa{}, err
 	}
+	anketaAge, err := domain.NewAge(anketaDTO.Age)
+	if err != nil {
+		log.Println("Неверный возраст")
+		return domain.Anketa{}, err
+	}
 
 	anketa := domain.Anketa{
 		ID:              id,
 		Username:        username,
+		Age:             anketaAge,
 		Gender:          gender,
 		PreferredGender: preferredGender,
 		Description:     anketaDTO.Description,
@@ -163,22 +173,90 @@ func (r *MongoAnketaRepo) FindByID(ctx context.Context, id uuid.UUID) (domain.An
 	return anketa, nil
 }
 
-func (r *MongoAnketaRepo) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender, limit int) ([]domain.Anketa, error) {
+func (r *MongoAnketaRepo) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender /*limit int*/) ([]domain.Anketa, error) {
 
-	cursor, err := r.collection.Find(ctx, bson.M{"preferred_gender": pref})
+	cursor, err := r.collection.Find(ctx, bson.M{"preferred_gender": pref.Value})
 	if err != nil {
 		return []domain.Anketa{}, err
 	}
 
-	var anketas []domain.Anketa
-	count := 0
-	for cursor.Next(ctx) && count <= 10 {
-		count++
+	type anketaDTO struct {
+		ID              string   `bson:"id"`
+		Username        string   `bson:"username"`
+		Age             int      `bson:"age"`
+		Gender          string   `bson:"gender"`
+		PreferredGender string   `bson:"preferred_gender"`
+		Description     string   `bson:"description"`
+		Tags            []string `bson:"tags"`
+		Photos          []string `bson:"photos"`
+	}
 
-		var anketa domain.Anketa
-		err := cursor.Decode(&anketa)
+	var anketas []domain.Anketa
+	for cursor.Next(ctx) {
+
+		var anketaDTO anketaDTO
+		err := cursor.Decode(&anketaDTO)
 		if err != nil {
 			return []domain.Anketa{}, err
+		}
+
+		anketaDTO.Username = anketaDTO.Username[1:]
+
+		log.Println("anketaDTO:", anketaDTO)
+
+		tagsArray := make([]domain.Tag, 0, 10)
+		photosArray := make([]domain.Photo, 0, 3)
+		for _, tag := range anketaDTO.Tags {
+			valueObjectTag, err := domain.NewTag(tag)
+			if err != nil {
+				log.Println("Неверный формат тэга")
+				return []domain.Anketa{}, err
+			}
+			tagsArray = append(tagsArray, valueObjectTag)
+		}
+		for _, photo := range anketaDTO.Photos {
+			valueObjectPhoto, err := domain.NewPhoto(photo)
+			if err != nil {
+				log.Println("Неверный формат ссылки на фото")
+				return []domain.Anketa{}, err
+			}
+			photosArray = append(photosArray, valueObjectPhoto)
+		}
+		username, err := valueObjects.NewUsername(anketaDTO.Username)
+		if err != nil {
+			log.Println("Неверный формат юзернейма")
+			return []domain.Anketa{}, err
+		}
+		gender, err := domain.NewAnketaGender(anketaDTO.Gender)
+		if err != nil {
+			log.Println("Неверный формат пола")
+			return []domain.Anketa{}, err
+		}
+		preferredGender, err := domain.NewPreferredAnketaGender(anketaDTO.PreferredGender)
+		if err != nil {
+			log.Println("Неверный формат предпочитаемого пола в поиске")
+			return []domain.Anketa{}, err
+		}
+		anketaAge, err := domain.NewAge(anketaDTO.Age)
+		if err != nil {
+			log.Println("Неверный возраст")
+			return []domain.Anketa{}, err
+		}
+		id, err := uuid.Parse(anketaDTO.ID)
+		if err != nil {
+			log.Println("Ошибка с uuid", err)
+			return []domain.Anketa{}, err
+		}
+
+		anketa := domain.Anketa{
+			ID:              id,
+			Username:        username,
+			Age:             anketaAge,
+			Gender:          gender,
+			PreferredGender: preferredGender,
+			Description:     anketaDTO.Description,
+			Tags:            tagsArray,
+			Photos:          photosArray,
 		}
 
 		anketas = append(anketas, anketa)

@@ -21,6 +21,7 @@ func NewAnketaHandler(service domain.AnketaService) AnketaHandler {
 
 type CreateAnketaRequest struct {
 	Username        string   `json:"username" binding:"required"`
+	Age             int      `json:"age" binding:"required"`
 	Gender          string   `json:"gender" binding:"required"`
 	PreferredGender string   `json:"preferred_gender" binding:"required"`
 	Description     string   `json:"description" binding:"required"`
@@ -30,6 +31,7 @@ type CreateAnketaRequest struct {
 
 type UpdateAnketaRequest struct {
 	Username        string   `json:"username,omitempty"`
+	Age             int      `json:"age,omitempty"`
 	Gender          string   `json:"gender,omitempty"`
 	PreferredGender string   `json:"preferred_gender,omitempty"`
 	Description     string   `json:"description,omitempty"`
@@ -37,7 +39,7 @@ type UpdateAnketaRequest struct {
 	Photos          []string `json:"photos,omitempty"`
 }
 
-func (h *AnketaHandler) CreateAnketa(c *gin.Context) {
+func (h AnketaHandler) CreateAnketa(c *gin.Context) {
 	var req CreateAnketaRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -50,6 +52,7 @@ func (h *AnketaHandler) CreateAnketa(c *gin.Context) {
 	err := h.service.Create(
 		ctx,
 		req.Username,
+		req.Age,
 		req.Gender,
 		req.PreferredGender,
 		req.Description,
@@ -67,7 +70,7 @@ func (h *AnketaHandler) CreateAnketa(c *gin.Context) {
 	})
 }
 
-func (h *AnketaHandler) GetAnketaByID(c *gin.Context) {
+func (h AnketaHandler) GetAnketaByID(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -88,7 +91,25 @@ func (h *AnketaHandler) GetAnketaByID(c *gin.Context) {
 	c.JSON(http.StatusOK, anketa)
 }
 
-func (h *AnketaHandler) UpdateAnketa(c *gin.Context) {
+func (h AnketaHandler) GetAnketas(c *gin.Context) {
+
+	pref := c.Param("pref")
+	preferredGender, err := domain.NewPreferredAnketaGender(pref)
+	if err != nil {
+		log.Println("Ошибка при получении анкет по гендеру:", err)
+		c.JSON(500, "Произошла ошибка сервера, повторите еще раз позже")
+	}
+
+	log.Println("Предпочитаемый гендер:", pref)
+
+	ctx := c.Request.Context()
+	anketas, err := h.service.GetAnketas(ctx, preferredGender)
+
+	c.JSON(200, gin.H{"anketas": anketas})
+
+}
+
+func (h AnketaHandler) UpdateAnketa(c *gin.Context) {
 	var req UpdateAnketaRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -132,7 +153,7 @@ func (h *AnketaHandler) UpdateAnketa(c *gin.Context) {
 	})
 }
 
-func (h *AnketaHandler) DeleteAnketa(c *gin.Context) {
+func (h AnketaHandler) DeleteAnketa(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -143,8 +164,7 @@ func (h *AnketaHandler) DeleteAnketa(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-	err = h.service.Delete(ctx, id)
+	err = h.service.Delete(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Ошибка при удалении анкеты"})
@@ -156,9 +176,31 @@ func (h *AnketaHandler) DeleteAnketa(c *gin.Context) {
 	})
 }
 
-func (h *AnketaHandler) RegisterRoutes(r *gin.Engine) {
+func (h AnketaHandler) GetTags(c *gin.Context) {
+
+	tags := []string{
+		"Спорт", "Музыка", "Ранние подъёмы", "Сова",
+		"Жаворонок", "Фильмы", "Игры", "Сериалы", "Аниме",
+		"Активный отдых", "Рисование", "Путешествия", "Карьера",
+		"Книги", "Культурный отдых", "Учёба", "Саморазвитие",
+	}
+
+	go func() {
+		select {
+		case <-c.Request.Context().Done():
+			c.JSON(500, gin.H{"error": "Произошла ошибка при получении тегов"})
+		default:
+			c.JSON(200, gin.H{"tags": tags})
+		}
+	}()
+
+	c.JSON(200, gin.H{"message": "Начато получение тегов"})
+}
+
+func (h AnketaHandler) RegisterRoutes(r *gin.Engine) {
 	r.POST("/create", h.CreateAnketa)
 	r.GET("/anketa/:id", h.GetAnketaByID)
 	r.PUT("/anketa/:id", h.UpdateAnketa)
 	r.DELETE("/anketa/:id", h.DeleteAnketa)
+	r.GET("/anketas/:pref", h.GetAnketas)
 }

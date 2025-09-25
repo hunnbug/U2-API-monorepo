@@ -33,6 +33,7 @@ var (
 func (s AnketaService) Create(
 	ctx context.Context,
 	username string,
+	age int,
 	gender string,
 	preferredGender string,
 	description string,
@@ -75,9 +76,15 @@ func (s AnketaService) Create(
 		validatedPhotos = append(validatedPhotos, photo)
 	}
 
+	anketaAge, err := domain.NewAge(age)
+	if err != nil {
+		return fmt.Errorf("Неверный возраст. %w", err)
+	}
+
 	anketa := domain.Anketa{
 		ID:              uuid.New(),
 		Username:        usernameVO,
+		Age:             anketaAge,
 		Gender:          anketaGender,
 		PreferredGender: preferredAnketaGender,
 		Description:     description,
@@ -161,6 +168,15 @@ func (s AnketaService) validateUpdateData(updateData map[string]interface{}) err
 				return fmt.Errorf("неверное имя пользователя: %w", err)
 			}
 
+		case "age":
+			ageint, ok := value.(int)
+			if !ok {
+				return fmt.Errorf("возраст должен быть цифрой")
+			}
+			if _, err := domain.NewAge(ageint); err != nil {
+				return fmt.Errorf("неверный возраст: %w", err)
+			}
+
 		case "gender":
 			genderStr, ok := value.(string)
 			if !ok {
@@ -214,12 +230,14 @@ func (s AnketaService) validateUpdateData(updateData map[string]interface{}) err
 	return nil
 }
 
-func (s AnketaService) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender, limit int) ([]domain.Anketa, error) {
+func (s AnketaService) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender) ([]domain.Anketa, error) {
 
-	anketas, err := s.repo.GetAnketas(ctx, pref, limit)
+	anketas, err := s.repo.GetAnketas(ctx, pref)
 	if err != nil {
 		return []domain.Anketa{}, err
 	}
+
+	log.Println("Полученные анкеты по префу", pref.Value, "\n", anketas)
 
 	return anketas, nil
 

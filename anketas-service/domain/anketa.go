@@ -3,6 +3,7 @@ package domain
 import (
 	errs "anketas-service/errors"
 	"anketas-service/valueObjects"
+	"errors"
 	"strings"
 
 	"github.com/google/uuid"
@@ -70,9 +71,26 @@ func NewPhoto(url string) (Photo, error) {
 	}
 }
 
+type Age int
+
+func NewAge(value int) (Age, error) {
+	if value <= 0 {
+		return 0, errors.New("Возраст не может быть меньше нуля")
+	}
+	if value > 119 {
+		return 0, errors.New("Возраст не может быть больше 119")
+	}
+	return Age(value), nil
+}
+
+func (a Age) Int() int {
+	return int(a)
+}
+
 type Anketa struct {
 	ID              uuid.UUID
 	Username        valueObjects.Username
+	Age             Age
 	Gender          AnketaGender
 	PreferredGender PreferredAnketaGender
 	Description     string
