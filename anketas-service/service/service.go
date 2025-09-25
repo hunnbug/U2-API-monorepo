@@ -230,9 +230,9 @@ func (s AnketaService) validateUpdateData(updateData map[string]interface{}) err
 	return nil
 }
 
-func (s AnketaService) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender) ([]domain.Anketa, error) {
+func (s AnketaService) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender, id uuid.UUID) ([]domain.Anketa, error) {
 
-	anketas, err := s.repo.GetAnketas(ctx, pref)
+	anketas, err := s.repo.GetAnketas(ctx, pref, id)
 	if err != nil {
 		return []domain.Anketa{}, err
 	}

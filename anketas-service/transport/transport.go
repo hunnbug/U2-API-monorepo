@@ -93,17 +93,24 @@ func (h AnketaHandler) GetAnketaByID(c *gin.Context) {
 
 func (h AnketaHandler) GetAnketas(c *gin.Context) {
 
-	pref := c.Param("pref")
+	pref := c.Query("pref")
 	preferredGender, err := domain.NewPreferredAnketaGender(pref)
 	if err != nil {
 		log.Println("Ошибка при получении анкет по гендеру:", err)
-		c.JSON(500, "Произошла ошибка сервера, повторите еще раз позже")
+		c.JSON(500, gin.H{"error": "Произошла ошибка сервера, повторите еще раз позже"})
+	}
+
+	id := c.Query("id")
+	parsedId, err := uuid.Parse(id)
+	if err != nil {
+		log.Println("Ошибка при парсинге UUID", err)
+		c.JSON(500, gin.H{"error": "Произошла ошибка сервера, повторите еще раз позже"})
 	}
 
 	log.Println("Предпочитаемый гендер:", pref)
 
 	ctx := c.Request.Context()
-	anketas, err := h.service.GetAnketas(ctx, preferredGender)
+	anketas, err := h.service.GetAnketas(ctx, preferredGender, parsedId)
 
 	c.JSON(200, gin.H{"anketas": anketas})
 
@@ -202,5 +209,6 @@ func (h AnketaHandler) RegisterRoutes(r *gin.Engine) {
 	r.GET("/anketa/:id", h.GetAnketaByID)
 	r.PUT("/anketa/:id", h.UpdateAnketa)
 	r.DELETE("/anketa/:id", h.DeleteAnketa)
-	r.GET("/anketas/:pref", h.GetAnketas)
+	r.GET("/anketas/match", h.GetAnketas)
+	r.GET("/tags", h.GetTags)
 }

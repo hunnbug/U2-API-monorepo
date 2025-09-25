@@ -20,5 +20,5 @@ type AnketaService interface {
 	GetAnketaByID(ctx context.Context, id uuid.UUID) (Anketa, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	Update(ctx context.Context, update map[string]any) error
-	GetAnketas(ctx context.Context, pref PreferredAnketaGender) ([]Anketa, error)
+	GetAnketas(ctx context.Context, pref PreferredAnketaGender, id uuid.UUID) ([]Anketa, error)
 }

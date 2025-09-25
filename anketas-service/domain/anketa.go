@@ -52,7 +52,10 @@ type Tag struct {
 
 func NewTag(value string) (Tag, error) {
 	switch value {
-	case "Asdd", "jsad": // поменять на реальные
+	case "Спорт", "Музыка", "Ранние подъёмы", "Сова",
+		"Жаворонок", "Фильмы", "Игры", "Сериалы", "Аниме",
+		"Активный отдых", "Рисование", "Путешествия", "Карьера",
+		"Книги", "Культурный отдых", "Учёба", "Саморазвитие":
 		return Tag{value}, nil
 	default:
 		return Tag{}, errs.ErrInvalidTag
