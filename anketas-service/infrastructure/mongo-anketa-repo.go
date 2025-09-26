@@ -6,7 +6,9 @@ import (
 	"anketas-service/valueObjects"
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"sort"
 
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -129,9 +131,27 @@ func (r *MongoAnketaRepo) FindByID(ctx context.Context, id uuid.UUID) (domain.An
 
 func (r *MongoAnketaRepo) GetAnketas(ctx context.Context, pref domain.PreferredAnketaGender, id uuid.UUID) ([]domain.Anketa, error) {
 
-	cursor, err := r.collection.Find(ctx, bson.M{"preferred_gender": pref.Value})
+	anketa, err := r.FindByID(ctx, id)
 	if err != nil {
+		log.Println("Произошла ошибка при получении пользователя по айди", id, "|", err)
 		return []domain.Anketa{}, err
+	}
+
+	var cursor *mongo.Cursor
+
+	if pref.Value == domain.PreferredBoth {
+		cursor, err = r.collection.Find(ctx, bson.M{})
+		if err != nil {
+			return []domain.Anketa{}, fmt.Errorf("Ошибка на стороне сервера, просим прощения, мы уже работаем над этим")
+		}
+	} else {
+		cursor, err = r.collection.Find(ctx,
+			bson.M{"preferred_gender": anketa.Gender.Value[:len(anketa.Gender.Value)-2], /*Это тоже пиздец позор*/
+				"gender": pref.Value + "а" /*Это позорище ебать*/})
+		// log.Printf("id: %s\nИщем гендер %s\nПредпочитаемый гендер %s", id.String(), pref.Value+"a", anketa.Gender.Value[:len(anketa.Gender.Value)-2])
+		if err != nil {
+			return []domain.Anketa{}, fmt.Errorf("Ошибка на стороне сервера, просим прощения, мы уже работаем над этим")
+		}
 	}
 
 	var anketas []domain.Anketa
@@ -140,7 +160,7 @@ func (r *MongoAnketaRepo) GetAnketas(ctx context.Context, pref domain.PreferredA
 		var anketaDTO anketaDTO
 		err := cursor.Decode(&anketaDTO)
 		if err != nil {
-			return []domain.Anketa{}, err
+			return []domain.Anketa{}, fmt.Errorf("Ошибка на стороне сервера, просим прощения, мы уже работаем над этим")
 		}
 
 		anketa, err := anketaDTOtoDomainAnketa(anketaDTO)
@@ -151,9 +171,13 @@ func (r *MongoAnketaRepo) GetAnketas(ctx context.Context, pref domain.PreferredA
 		anketas = append(anketas, anketa)
 	}
 
-	// matchAnketas()
+	log.Println("Анкеты до метчинга:", anketas)
 
-	return anketas, nil
+	afterMatch := matchAnketas(anketa, anketas)
+
+	log.Println("Анкеты после метчинга:", afterMatch)
+
+	return afterMatch, nil
 }
 
 func anketaDTOtoDomainAnketa(a anketaDTO) (domain.Anketa, error) {
@@ -218,7 +242,6 @@ func anketaDTOtoDomainAnketa(a anketaDTO) (domain.Anketa, error) {
 
 func matchAnketas(userAnketa domain.Anketa, anketas []domain.Anketa) []domain.Anketa {
 
-	var result []domain.Anketa
 	tagMap := make(map[domain.Tag]struct{})
 	for _, tag := range userAnketa.Tags {
 		tagMap[tag] = struct{}{}
@@ -228,6 +251,7 @@ func matchAnketas(userAnketa domain.Anketa, anketas []domain.Anketa) []domain.An
 		anketa *domain.Anketa
 		count  int
 	}
+
 	var pairs []anketaCountPair
 
 	// переписать на горутины
@@ -249,6 +273,11 @@ func matchAnketas(userAnketa domain.Anketa, anketas []domain.Anketa) []domain.An
 		pairs = append(pairs, anketaCountPair{&anketa, count})
 	}
 
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].count > pairs[j].count
+	})
+
+	var result []domain.Anketa
 	for _, pair := range pairs {
 		result = append(result, *pair.anketa)
 	}

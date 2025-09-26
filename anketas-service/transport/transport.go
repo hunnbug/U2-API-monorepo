@@ -107,8 +107,6 @@ func (h AnketaHandler) GetAnketas(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Произошла ошибка сервера, повторите еще раз позже"})
 	}
 
-	log.Println("Предпочитаемый гендер:", pref)
-
 	ctx := c.Request.Context()
 	anketas, err := h.service.GetAnketas(ctx, preferredGender, parsedId)
 

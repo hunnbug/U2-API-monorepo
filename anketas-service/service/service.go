@@ -237,8 +237,6 @@ func (s AnketaService) GetAnketas(ctx context.Context, pref domain.PreferredAnke
 		return []domain.Anketa{}, err
 	}
 
-	log.Println("Полученные анкеты по префу", pref.Value, "\n", anketas)
-
 	return anketas, nil
 
 }
