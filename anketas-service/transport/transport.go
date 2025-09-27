@@ -2,6 +2,7 @@ package transport
 
 import (
 	"anketas-service/domain"
+	"anketas-service/infrastructure"
 	errs "anketas-service/errors"
 	"fmt"
 	"log"
@@ -13,10 +14,11 @@ import (
 
 type AnketaHandler struct {
 	service domain.AnketaService
+	s3Storage *infrastructure.S3Storage
 }
 
-func NewAnketaHandler(service domain.AnketaService) AnketaHandler {
-	return AnketaHandler{service}
+func NewAnketaHandler(service domain.AnketaService, s3Storage *infrastructure.S3Storage) AnketaHandler {
+	return AnketaHandler{service: service, s3Storage: s3Storage}
 }
 
 type CreateAnketaRequest struct {
@@ -51,7 +53,7 @@ func (h AnketaHandler) CreateAnketa(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	err := h.service.Create(
+	anketaID, err := h.service.Create(
 		ctx,
 		req.Username,
 		req.Age,
@@ -70,6 +72,7 @@ func (h AnketaHandler) CreateAnketa(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Анкета успешно создана",
+		"anketa_id": anketaID.String(),
 	})
 }
 
@@ -208,6 +211,27 @@ func (h AnketaHandler) GetTags(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Начато получение тегов"})
 }
 
+// Получение presigned URL для загрузки фотографии
+func (h AnketaHandler) GetUploadURL(c *gin.Context) {
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(400, gin.H{"error": "user_id обязателен"})
+		return
+	}
+
+	uploadURL, err := h.s3Storage.GenerateUploadURL(c.Request.Context(), userID)
+	if err != nil {
+		log.Printf("Ошибка создания presigned URL: %v", err)
+		c.JSON(500, gin.H{"error": "Ошибка создания URL для загрузки"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"upload_url": uploadURL,
+		"message": "URL для загрузки создан",
+	})
+}
+
 func (h AnketaHandler) RegisterRoutes(r *gin.Engine) {
 	r.POST("/create", h.CreateAnketa)
 	r.GET("/anketa/:id", h.GetAnketaByID)
@@ -215,4 +239,5 @@ func (h AnketaHandler) RegisterRoutes(r *gin.Engine) {
 	r.DELETE("/anketa/:id", h.DeleteAnketa)
 	r.GET("/anketas/match", h.GetAnketas)
 	r.GET("/tags", h.GetTags)
+	r.GET("/upload-url", h.GetUploadURL)
 }

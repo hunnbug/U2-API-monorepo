@@ -189,7 +189,11 @@ func (r *MongoAnketaRepo) GetAnketas(ctx context.Context, pref domain.PreferredA
 
 func anketaDTOtoDomainAnketa(a anketaDTO) (domain.Anketa, error) {
 
-	a.Username = a.Username[1:]
+	// Убираем @ если он есть в начале username
+	cleanUsername := a.Username
+	if len(cleanUsername) > 0 && cleanUsername[0] == '@' {
+		cleanUsername = cleanUsername[1:]
+	}
 
 	tagsArray := make([]domain.Tag, 0, 10)
 	photosArray := make([]domain.Photo, 0, 3)
@@ -210,7 +214,7 @@ func anketaDTOtoDomainAnketa(a anketaDTO) (domain.Anketa, error) {
 		}
 		photosArray = append(photosArray, valueObjectPhoto)
 	}
-	username, err := valueObjects.NewUsername(a.Username)
+	username, err := valueObjects.NewUsername(cleanUsername)
 	if err != nil {
 		log.Println("Неверный формат юзернейма")
 		return domain.Anketa{}, err
@@ -274,6 +278,11 @@ func matchAnketas(userAnketa domain.Anketa, anketas []domain.Anketa) []domain.An
 	// переписать на горутины
 	for _, anketa := range anketas {
 		var count int
+
+		// Исключаем анкету самого пользователя
+		if anketa.ID == userAnketa.ID {
+			continue
+		}
 
 		if anketa.Age.Int() < userAnketa.Age.Int()-AGE_DIFFERENCE ||
 			anketa.Age.Int() > userAnketa.Age.Int()+AGE_DIFFERENCE {

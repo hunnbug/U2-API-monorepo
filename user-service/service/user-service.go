@@ -111,6 +111,18 @@ func (s UserServiceImpl) GetUserByID(id uuid.UUID) (domain.User, error) {
 	return s.repo.FindByID(id)
 }
 
+func (s UserServiceImpl) CheckLoginExists(login string) (bool, error) {
+	return s.repo.ExistsByLogin(login)
+}
+
+func (s UserServiceImpl) CheckEmailExists(email string) (bool, error) {
+	return s.repo.ExistsByEmail(email)
+}
+
+func (s UserServiceImpl) CheckPhoneExists(phone string) (bool, error) {
+	return s.repo.ExistsByPhone(phone)
+}
+
 func (s UserServiceImpl) generateToken(id uuid.UUID) (string, error) {
 	return "generated-token-" + id.String(), nil
 }

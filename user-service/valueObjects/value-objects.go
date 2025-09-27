@@ -86,7 +86,10 @@ func isValidLogin(value string) bool {
 	if len(value) < 4 {
 		return false
 	}
-	matched, _ := regexp.MatchString(`^[a-zA-Z0-9_]+$`, value)
+	if len(value) > 14 {
+		return false
+	}
+	matched, _ := regexp.MatchString(`^[a-zA-Z]+$`, value)
 	return matched
 }
 

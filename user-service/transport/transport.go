@@ -181,10 +181,55 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+func (h *UserHandler) CheckLoginExists(c *gin.Context) {
+	login := c.Param("login")
+	exists, err := h.userService.CheckLoginExists(login)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки логина"})
+		return
+	}
+	if exists {
+		c.JSON(http.StatusOK, gin.H{"exists": true})
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"exists": false})
+	}
+}
+
+func (h *UserHandler) CheckEmailExists(c *gin.Context) {
+	email := c.Param("email")
+	exists, err := h.userService.CheckEmailExists(email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки email"})
+		return
+	}
+	if exists {
+		c.JSON(http.StatusOK, gin.H{"exists": true})
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"exists": false})
+	}
+}
+
+func (h *UserHandler) CheckPhoneExists(c *gin.Context) {
+	phone := c.Param("phone")
+	exists, err := h.userService.CheckPhoneExists(phone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки телефона"})
+		return
+	}
+	if exists {
+		c.JSON(http.StatusOK, gin.H{"exists": true})
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"exists": false})
+	}
+}
+
 func (h *UserHandler) RegisterRoutes(router *gin.Engine) {
 	router.POST("/register", h.Register)
 	router.POST("/login", h.Login)
 	router.PUT("/users/:id", h.UpdateUser)
 	router.DELETE("/users/:id", h.DeleteUser)
 	router.GET("/users/:id", h.GetUser)
+	router.GET("/users/check-login/:login", h.CheckLoginExists)
+	router.GET("/users/check-email/:email", h.CheckEmailExists)
+	router.GET("/users/check-phone/:phone", h.CheckPhoneExists)
 }

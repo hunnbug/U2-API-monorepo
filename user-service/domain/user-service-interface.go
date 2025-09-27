@@ -8,4 +8,7 @@ type UserService interface {
 	Delete(id uuid.UUID) error
 	Update(id uuid.UUID, opts ...UpdateOption) error
 	GetUserByID(id uuid.UUID) (User, error)
+	CheckLoginExists(login string) (bool, error)
+	CheckEmailExists(email string) (bool, error)
+	CheckPhoneExists(phone string) (bool, error)
 }

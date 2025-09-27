@@ -40,30 +40,30 @@ func (s AnketaService) Create(
 	tags []string,
 	photos []string,
 	likedBy []string,
-) error {
+) (uuid.UUID, error) {
 
 	log.Println("Сервис начал создание анкеты")
 
 	usernameVO, err := valueObjects.NewUsername(username)
 	if err != nil {
-		return fmt.Errorf("неверное имя пользователя: %w", err)
+		return uuid.Nil, fmt.Errorf("неверное имя пользователя: %w", err)
 	}
 
 	anketaGender, err := domain.NewAnketaGender(gender)
 	if err != nil {
-		return fmt.Errorf("неверный пол")
+		return uuid.Nil, fmt.Errorf("неверный пол")
 	}
 
 	preferredAnketaGender, err := domain.NewPreferredAnketaGender(preferredGender)
 	if err != nil {
-		return fmt.Errorf("неверный предпочитаемый пол: %w", err)
+		return uuid.Nil, fmt.Errorf("неверный предпочитаемый пол: %w", err)
 	}
 
 	var validatedTags []domain.Tag
 	for _, tagValue := range tags {
 		tag, err := domain.NewTag(tagValue)
 		if err != nil {
-			return fmt.Errorf("неверный тег '%s': %w", tagValue, err)
+			return uuid.Nil, fmt.Errorf("неверный тег '%s': %w", tagValue, err)
 		}
 		validatedTags = append(validatedTags, tag)
 	}
@@ -72,14 +72,14 @@ func (s AnketaService) Create(
 	for _, photoURL := range photos {
 		photo, err := domain.NewPhoto(photoURL)
 		if err != nil {
-			return fmt.Errorf("неверная ссылка на фото '%s': %w", photoURL, err)
+			return uuid.Nil, fmt.Errorf("неверная ссылка на фото '%s': %w", photoURL, err)
 		}
 		validatedPhotos = append(validatedPhotos, photo)
 	}
 
 	anketaAge, err := domain.NewAge(age)
 	if err != nil {
-		return fmt.Errorf("Неверный возраст. %w", err)
+		return uuid.Nil, fmt.Errorf("Неверный возраст. %w", err)
 	}
 
 	var likedByUUID []uuid.UUID
@@ -87,7 +87,7 @@ func (s AnketaService) Create(
 		tag, err := uuid.Parse(id)
 		if err != nil {
 			log.Println("Ошибка с uuid", err)
-			return err
+			return uuid.Nil, err
 		}
 		likedByUUID = append(likedByUUID, tag)
 	}
@@ -107,10 +107,10 @@ func (s AnketaService) Create(
 	log.Println("Сервисный слой создал анкету успешно")
 
 	if err := s.repo.Create(ctx, anketa); err != nil {
-		return fmt.Errorf("ошибка при создании анкеты: %w", err)
+		return uuid.Nil, fmt.Errorf("ошибка при создании анкеты: %w", err)
 	}
 
-	return nil
+	return anketa.ID, nil
 }
 
 func (s AnketaService) GetAnketaByID(ctx context.Context, id uuid.UUID) (domain.Anketa, error) {
@@ -232,6 +232,18 @@ func (s AnketaService) validateUpdateData(updateData map[string]interface{}) err
 		case "description":
 			if _, ok := value.(string); !ok {
 				return fmt.Errorf("описание должно быть строкой")
+			}
+
+		case "liked_by":
+			likedBySlice, ok := value.([]string)
+			if !ok {
+				return fmt.Errorf("liked_by должен быть массивом строк")
+			}
+			// Валидируем, что все элементы являются валидными UUID
+			for _, userID := range likedBySlice {
+				if _, err := uuid.Parse(userID); err != nil {
+					return fmt.Errorf("неверный UUID пользователя '%s': %w", userID, err)
+				}
 			}
 
 		default:

@@ -5,6 +5,7 @@ import (
 	"anketas-service/infrastructure"
 	"anketas-service/service"
 	"anketas-service/transport"
+	"context"
 	"log"
 	"os"
 
@@ -30,7 +31,22 @@ func main() {
 
 	repo := infrastructure.NewAnketaRepo(db)
 	service := service.NewAnketaService(repo)
-	handler := transport.NewAnketaHandler(service)
+	
+	s3Storage, err := infrastructure.NewS3Storage()
+	if err != nil {
+		log.Printf("Ошибка инициализации S3: %v", err)
+		return
+	}
+	
+	// Проверяем доступность bucket
+	ctx := context.Background()
+	if err := s3Storage.CheckBucketExists(ctx); err != nil {
+		log.Printf("Ошибка проверки bucket: %v", err)
+		return
+	}
+	log.Println("S3 Storage инициализирован, bucket доступен")
+	
+	handler := transport.NewAnketaHandler(service, s3Storage)
 
 	r := gin.Default()
 

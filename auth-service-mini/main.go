@@ -21,6 +21,8 @@ func main() {
 	router.POST("/userReg", saveUserRegToRedis)
 	router.POST("/login", login)
 	router.POST("/verify", verifyToken)
+	router.POST("/saveAnketaId", saveAnketaId)
+	router.GET("/getAnketaId/:login", getAnketaId)
 
 	err = router.Run("127.0.0.1:8001")
 	if err != nil {
