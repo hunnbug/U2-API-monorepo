@@ -34,6 +34,7 @@ type anketaDTO struct {
 	Description     string   `bson:"description"`
 	Tags            []string `bson:"tags"`
 	Photos          []string `bson:"photos"`
+	LikedBy         []string `bson:"liked_by"`
 }
 
 const AGE_DIFFERENCE = 2
@@ -44,12 +45,17 @@ func (r *MongoAnketaRepo) Create(ctx context.Context, anketa domain.Anketa) erro
 
 	tags := make([]string, 0, 10)
 	photos := make([]string, 0, 3)
+	var likedBy []string
 	for _, photo := range anketa.Photos {
 		photos = append(photos, photo.Url)
 	}
 	for _, tag := range anketa.Tags {
 		tags = append(tags, tag.Value)
 	}
+	for _, tag := range anketa.LikedBy {
+		likedBy = append(likedBy, tag.String())
+	}
+
 	doc := bson.M{
 		"id":               anketa.ID.String(),
 		"username":         anketa.Username.Value,
@@ -59,6 +65,7 @@ func (r *MongoAnketaRepo) Create(ctx context.Context, anketa domain.Anketa) erro
 		"description":      anketa.Description,
 		"tags":             tags,
 		"photos":           photos,
+		"liked_by":         likedBy,
 	}
 
 	_, err := r.collection.InsertOne(ctx, doc)
@@ -186,6 +193,7 @@ func anketaDTOtoDomainAnketa(a anketaDTO) (domain.Anketa, error) {
 
 	tagsArray := make([]domain.Tag, 0, 10)
 	photosArray := make([]domain.Photo, 0, 3)
+	var likedBy []uuid.UUID
 	for _, tag := range a.Tags {
 		valueObjectTag, err := domain.NewTag(tag)
 		if err != nil {
@@ -227,6 +235,14 @@ func anketaDTOtoDomainAnketa(a anketaDTO) (domain.Anketa, error) {
 		log.Println("Ошибка с uuid", err)
 		return domain.Anketa{}, err
 	}
+	for _, id := range a.LikedBy {
+		tag, err := uuid.Parse(id)
+		if err != nil {
+			log.Println("Ошибка с uuid", err)
+			return domain.Anketa{}, err
+		}
+		likedBy = append(likedBy, tag)
+	}
 
 	return domain.Anketa{
 		ID:              id,
@@ -237,6 +253,7 @@ func anketaDTOtoDomainAnketa(a anketaDTO) (domain.Anketa, error) {
 		Description:     a.Description,
 		Tags:            tagsArray,
 		Photos:          photosArray,
+		LikedBy:         likedBy,
 	}, nil
 }
 

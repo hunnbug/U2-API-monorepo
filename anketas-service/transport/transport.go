@@ -27,6 +27,7 @@ type CreateAnketaRequest struct {
 	Description     string   `json:"description" binding:"required"`
 	Tags            []string `json:"tags" binding:"required"`
 	Photos          []string `json:"photos" binding:"required"`
+	LikedBy         []string `json:"liked_by"`
 }
 
 type UpdateAnketaRequest struct {
@@ -37,6 +38,7 @@ type UpdateAnketaRequest struct {
 	Description     string   `json:"description,omitempty"`
 	Tags            []string `json:"tags,omitempty"`
 	Photos          []string `json:"photos,omitempty"`
+	LikedBy         []string `json:"liked_by,omitempty"`
 }
 
 func (h AnketaHandler) CreateAnketa(c *gin.Context) {
@@ -58,6 +60,7 @@ func (h AnketaHandler) CreateAnketa(c *gin.Context) {
 		req.Description,
 		req.Tags,
 		req.Photos,
+		req.LikedBy,
 	)
 
 	if err != nil {
@@ -141,6 +144,9 @@ func (h AnketaHandler) UpdateAnketa(c *gin.Context) {
 	}
 	if req.Photos != nil {
 		updateData["photos"] = req.Photos
+	}
+	if req.LikedBy != nil {
+		updateData["liked_by"] = req.LikedBy
 	}
 
 	updateData["id"] = c.Param("id")

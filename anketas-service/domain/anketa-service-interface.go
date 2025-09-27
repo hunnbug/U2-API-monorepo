@@ -16,6 +16,7 @@ type AnketaService interface {
 		description string,
 		tags []string,
 		photos []string,
+		likedBy []string,
 	) error
 	GetAnketaByID(ctx context.Context, id uuid.UUID) (Anketa, error)
 	Delete(ctx context.Context, id uuid.UUID) error

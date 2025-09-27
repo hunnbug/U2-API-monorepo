@@ -39,6 +39,7 @@ func (s AnketaService) Create(
 	description string,
 	tags []string,
 	photos []string,
+	likedBy []string,
 ) error {
 
 	log.Println("Сервис начал создание анкеты")
@@ -81,6 +82,16 @@ func (s AnketaService) Create(
 		return fmt.Errorf("Неверный возраст. %w", err)
 	}
 
+	var likedByUUID []uuid.UUID
+	for _, id := range likedBy {
+		tag, err := uuid.Parse(id)
+		if err != nil {
+			log.Println("Ошибка с uuid", err)
+			return err
+		}
+		likedByUUID = append(likedByUUID, tag)
+	}
+
 	anketa := domain.Anketa{
 		ID:              uuid.New(),
 		Username:        usernameVO,
@@ -90,6 +101,7 @@ func (s AnketaService) Create(
 		Description:     description,
 		Tags:            validatedTags,
 		Photos:          validatedPhotos,
+		LikedBy:         likedByUUID,
 	}
 
 	log.Println("Сервисный слой создал анкету успешно")

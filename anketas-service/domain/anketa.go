@@ -99,4 +99,5 @@ type Anketa struct {
 	Description     string
 	Tags            []Tag
 	Photos          []Photo
+	LikedBy         []uuid.UUID
 }
