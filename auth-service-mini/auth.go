@@ -12,6 +12,7 @@ import (
 var jwtSecret = []byte("pidorok-key")
 
 func login(c *gin.Context) {
+	log.Printf("=== НАЧАЛО АВТОРИЗАЦИИ ===")
 
 	var request struct {
 		Creds    string
@@ -21,14 +22,20 @@ func login(c *gin.Context) {
 
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		log.Printf("Ошибка парсинга JSON: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат данных для входа"})
 		return
 	}
 
+	log.Printf("Получен запрос на авторизацию: Creds=%s, Value=%s", request.Creds, request.Value)
+
 	if !checkUserCreds(request.Creds, request.Value, request.Password) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные для входа"})
+		log.Printf("Проверка учетных данных не пройдена для %s: %s", request.Creds, request.Value)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверные данные для входа"})
 		return
 	}
+
+	log.Printf("Учетные данные проверены успешно")
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"exp": time.Now().Add(40 * time.Second).Unix(), // поменять время истечения токена
@@ -36,26 +43,27 @@ func login(c *gin.Context) {
 
 	tokenString, err := token.SignedString(jwtSecret)
 	if err != nil {
+		log.Printf("Ошибка генерации токена: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка на стороне сервера"})
 		return
 	}
 
-	// Получаем user_id из Redis
-	log.Printf("Пытаемся получить user_id для %s: %s", request.Creds, request.Value)
-	userId, err := getUserIdFromRedis(request.Creds, request.Value)
-	if err != nil {
-		log.Printf("Ошибка получения user_id: %v", err)
-		// Не блокируем авторизацию, просто не возвращаем user_id
-		c.JSON(http.StatusOK, gin.H{"token": tokenString})
-		return
-	}
-	
-	log.Printf("Найден user_id: %s", userId)
+	log.Printf("Токен успешно сгенерирован")
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": tokenString,
-		"user_id": userId,
-	})
+	// Получаем user_id и anketa_id из Redis
+	userId, _ := getUserIdFromRedis(request.Creds, request.Value)
+	anketaId, _ := getAnketaIdFromRedis(request.Creds, request.Value)
+
+	// Формируем ответ
+	response := gin.H{"token": tokenString}
+	if userId != "" {
+		response["user_id"] = userId
+	}
+	if anketaId != "" {
+		response["anketa_id"] = anketaId
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func authMiddleware(c *gin.Context) {

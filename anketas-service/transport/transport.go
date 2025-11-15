@@ -4,7 +4,10 @@ import (
 	"anketas-service/domain"
 	"anketas-service/infrastructure"
 	errs "anketas-service/errors"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -30,6 +33,8 @@ type CreateAnketaRequest struct {
 	Tags            []string `json:"tags" binding:"required"`
 	Photos          []string `json:"photos" binding:"required"`
 	LikedBy         []string `json:"liked_by"`
+	CredType        string   `json:"cred_type"`
+	Identifier      string   `json:"identifier"`
 }
 
 type UpdateAnketaRequest struct {
@@ -41,6 +46,8 @@ type UpdateAnketaRequest struct {
 	Tags            []string `json:"tags,omitempty"`
 	Photos          []string `json:"photos,omitempty"`
 	LikedBy         []string `json:"liked_by,omitempty"`
+	Action          string   `json:"action,omitempty"`
+	CurrentUserAnketaId string `json:"current_user_anketa_id,omitempty"`
 }
 
 func (h AnketaHandler) CreateAnketa(c *gin.Context) {
@@ -68,6 +75,30 @@ func (h AnketaHandler) CreateAnketa(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Сохраняем anketa_id в Redis через auth-service (синхронно, чтобы гарантировать сохранение)
+	if req.CredType != "" && req.Identifier != "" {
+		log.Printf("Сохраняем anketa_id в Redis: cred_type=%s, identifier=%s, anketa_id=%s", 
+			req.CredType, req.Identifier, anketaID.String())
+		
+		// Сначала сохраняем по переданному типу
+		saveAnketaIdToAuthService(req.CredType, req.Identifier, anketaID.String())
+		
+		// Затем получаем все учетные данные и сохраняем по всем типам
+		allCreds, err := getAllUserCredsFromAuthService(req.CredType, req.Identifier)
+		if err == nil && allCreds != nil {
+			log.Printf("Получены все учетные данные: login=%s, email=%s, phone=%s", 
+				allCreds["login"], allCreds["email"], allCreds["phone"])
+			saveAnketaIdToAllInAuthService(allCreds["login"], allCreds["email"], allCreds["phone"], anketaID.String())
+		} else {
+			log.Printf("Не удалось получить все учетные данные, сохранено только по %s", req.CredType)
+		}
+		
+		log.Printf("anketa_id сохранен в Redis (синхронно)")
+	} else {
+		log.Printf("ПРЕДУПРЕЖДЕНИЕ: cred_type или identifier пустые, anketa_id не будет сохранен в Redis")
+		log.Printf("ПРЕДУПРЕЖДЕНИЕ: cred_type='%s', identifier='%s'", req.CredType, req.Identifier)
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -98,33 +129,119 @@ func (h AnketaHandler) GetAnketaByID(c *gin.Context) {
 }
 
 func (h AnketaHandler) GetAnketas(c *gin.Context) {
-
+	log.Printf("=== ПОЛУЧЕНИЕ АНКЕТ ДЛЯ МЕТЧИНГА ===")
+	
 	pref := c.Query("pref")
+	id := c.Query("id")
+	log.Printf("Запрос: pref=%s, id=%s", pref, id)
+	
 	preferredGender, err := domain.NewPreferredAnketaGender(pref)
 	if err != nil {
-		log.Println("Ошибка при получении анкет по гендеру:", err)
+		log.Printf("Ошибка при создании PreferredGender из '%s': %v", pref, err)
 		c.JSON(500, gin.H{"error": "Произошла ошибка сервера, повторите еще раз позже"})
+		return
 	}
+	log.Printf("PreferredGender создан: %+v", preferredGender)
 
-	id := c.Query("id")
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
-		log.Println("Ошибка при парсинге UUID", err)
+		log.Printf("Ошибка при парсинге UUID '%s': %v", id, err)
 		c.JSON(500, gin.H{"error": "Произошла ошибка сервера, повторите еще раз позже"})
+		return
 	}
+	log.Printf("UUID распарсен: %s", parsedId.String())
 
 	ctx := c.Request.Context()
 	anketas, err := h.service.GetAnketas(ctx, preferredGender, parsedId)
+	if err != nil {
+		log.Printf("Ошибка получения анкет: %v", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 
+	log.Printf("Возвращаем %d анкет клиенту", len(anketas))
+	log.Printf("=== КОНЕЦ ПОЛУЧЕНИЯ АНКЕТ ===")
+	
+	// Убеждаемся, что возвращаем пустой массив, а не null
+	if anketas == nil {
+		anketas = []domain.Anketa{}
+	}
+	
 	c.JSON(200, gin.H{"anketas": anketas})
-
 }
 
 func (h AnketaHandler) UpdateAnketa(c *gin.Context) {
+	log.Printf("=== UpdateAnketa вызван ===")
+	log.Printf("Метод запроса: %s", c.Request.Method)
+	log.Printf("URL: %s", c.Request.URL.String())
+	
 	var req UpdateAnketaRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("Ошибка парсинга JSON: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат данных"})
+		return
+	}
+
+	log.Printf("Получен запрос: Action=%s, CurrentUserAnketaId=%s", req.Action, req.CurrentUserAnketaId)
+
+	// Обработка лайка
+	if req.Action == "like" && req.CurrentUserAnketaId != "" {
+		log.Printf("=== ОБРАБОТКА ЛАЙКА ===")
+		idStr := c.Param("id")
+		targetAnketaId, err := uuid.Parse(idStr)
+		if err != nil {
+			log.Printf("Ошибка парсинга ID целевой анкеты '%s': %v", idStr, err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат ID анкеты"})
+			return
+		}
+		
+		// Получаем текущую анкету, чтобы проверить liked_by
+		ctx := c.Request.Context()
+		anketa, err := h.service.GetAnketaByID(ctx, targetAnketaId)
+		if err != nil {
+			log.Printf("Ошибка при получении анкеты: %v", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Анкета не найдена"})
+			return
+		}
+		
+		// Проверяем, не лайкал ли уже пользователь
+		alreadyLiked := false
+		for _, likedBy := range anketa.LikedBy {
+			if likedBy.String() == req.CurrentUserAnketaId {
+				alreadyLiked = true
+				break
+			}
+		}
+		
+		if alreadyLiked {
+			log.Printf("Пользователь уже лайкнул эту анкету")
+			c.JSON(http.StatusOK, gin.H{"message": "Лайк уже был поставлен"})
+			return
+		}
+		
+		// Добавляем лайк через Update
+		updateData := map[string]interface{}{
+			"id": idStr,
+		}
+		
+		// Получаем текущий список liked_by и добавляем новый ID
+		currentLikedBy := make([]string, 0, len(anketa.LikedBy)+1)
+		for _, id := range anketa.LikedBy {
+			currentLikedBy = append(currentLikedBy, id.String())
+		}
+		currentLikedBy = append(currentLikedBy, req.CurrentUserAnketaId)
+		updateData["liked_by"] = currentLikedBy
+		
+		err = h.service.Update(ctx, updateData)
+		if err != nil {
+			log.Printf("Ошибка при добавлении лайка: %v", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		
+		log.Printf("Лайк успешно добавлен")
+		c.JSON(http.StatusOK, gin.H{"message": "Лайк успешно добавлен"})
 		return
 	}
 
@@ -230,6 +347,91 @@ func (h AnketaHandler) GetUploadURL(c *gin.Context) {
 		"upload_url": uploadURL,
 		"message": "URL для загрузки создан",
 	})
+}
+
+func saveAnketaIdToAuthService(credType, identifier, anketaId string) {
+	url := "http://127.0.0.1:8001/saveAnketaId"
+	data := map[string]string{
+		"cred_type": credType,
+		"identifier": identifier,
+		"anketa_id": anketaId,
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Ошибка маршалинга данных для сохранения anketa_id: %v", err)
+		return
+	}
+	
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Ошибка сохранения anketa_id в auth-service: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Ошибка сохранения anketa_id: статус код %d", resp.StatusCode)
+	} else {
+		log.Printf("anketa_id успешно сохранен в auth-service")
+	}
+}
+
+func getAllUserCredsFromAuthService(credType, identifier string) (map[string]string, error) {
+	url := "http://127.0.0.1:8001/getAllUserCreds"
+	data := map[string]string{
+		"cred_type": credType,
+		"identifier": identifier,
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("статус код %d", resp.StatusCode)
+	}
+	
+	var result map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+	
+	return result, nil
+}
+
+func saveAnketaIdToAllInAuthService(login, email, phone, anketaId string) {
+	url := "http://127.0.0.1:8001/saveAnketaIdToAll"
+	data := map[string]string{
+		"login": login,
+		"email": email,
+		"phone": phone,
+		"anketa_id": anketaId,
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Ошибка маршалинга данных для сохранения anketa_id по всем типам: %v", err)
+		return
+	}
+	
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Ошибка сохранения anketa_id по всем типам в auth-service: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("Ошибка сохранения anketa_id по всем типам: статус код %d, тело: %s", resp.StatusCode, string(body))
+	} else {
+		log.Printf("anketa_id успешно сохранен по всем типам учетных данных в auth-service")
+	}
 }
 
 func (h AnketaHandler) RegisterRoutes(r *gin.Engine) {

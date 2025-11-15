@@ -88,20 +88,35 @@ func getPasswordHashFromRedis(credType string, identifier string) (string, error
 	return storedHash, nil
 }
 
-func saveShitToRedis(login, email, phone, password string) {
+func saveShitToRedis(login, email, phone, password string) error {
 	ctx := context.Background()
 
 	key := fmt.Sprintf("auth:login:%s", login)
 	log.Println("добавляем:", key)
-	redisClient.Set(ctx, key, password, 0)
+	err := redisClient.Set(ctx, key, password, 0).Err()
+	if err != nil {
+		log.Printf("Ошибка сохранения пароля по логину: %v", err)
+		return err
+	}
 
 	key = fmt.Sprintf("auth:email:%s", email)
 	log.Println("добавляем:", key)
-	redisClient.Set(ctx, key, password, 0)
+	err = redisClient.Set(ctx, key, password, 0).Err()
+	if err != nil {
+		log.Printf("Ошибка сохранения пароля по email: %v", err)
+		return err
+	}
 
 	key = fmt.Sprintf("auth:phone:%s", phone)
 	log.Println("добавляем:", key)
-	redisClient.Set(ctx, key, password, 0)
+	err = redisClient.Set(ctx, key, password, 0).Err()
+	if err != nil {
+		log.Printf("Ошибка сохранения пароля по телефону: %v", err)
+		return err
+	}
+
+	log.Println("Пароли успешно сохранены в Redis")
+	return nil
 }
 
 func saveAnketaIdToRedis(credType, identifier, anketaId string) error {
@@ -136,7 +151,10 @@ func saveAnketaIdToRedis(credType, identifier, anketaId string) error {
 func saveAnketaIdToAllCredTypes(login, email, phone, anketaId string) error {
 	ctx := context.Background()
 	
-	// Сохраняем по логину
+	// Сохраняем по логину (обязательно)
+	if login == "" {
+		return fmt.Errorf("login не может быть пустым")
+	}
 	key := fmt.Sprintf("auth:login:%s:anketa_id", login)
 	log.Printf("Сохраняем ID анкеты по логину: %s = %s", key, anketaId)
 	err := redisClient.Set(ctx, key, anketaId, 0).Err()
@@ -145,22 +163,30 @@ func saveAnketaIdToAllCredTypes(login, email, phone, anketaId string) error {
 		return err
 	}
 	
-	// Сохраняем по email
-	key = fmt.Sprintf("auth:email:%s:anketa_id", email)
-	log.Printf("Сохраняем ID анкеты по email: %s = %s", key, anketaId)
-	err = redisClient.Set(ctx, key, anketaId, 0).Err()
-	if err != nil {
-		log.Printf("Ошибка сохранения ID анкеты по email: %v", err)
-		return err
+	// Сохраняем по email (если не пустой)
+	if email != "" {
+		key = fmt.Sprintf("auth:email:%s:anketa_id", email)
+		log.Printf("Сохраняем ID анкеты по email: %s = %s", key, anketaId)
+		err = redisClient.Set(ctx, key, anketaId, 0).Err()
+		if err != nil {
+			log.Printf("Ошибка сохранения ID анкеты по email: %v", err)
+			return err
+		}
+	} else {
+		log.Printf("Email пустой, пропускаем сохранение по email")
 	}
 	
-	// Сохраняем по телефону
-	key = fmt.Sprintf("auth:phone:%s:anketa_id", phone)
-	log.Printf("Сохраняем ID анкеты по телефону: %s = %s", key, anketaId)
-	err = redisClient.Set(ctx, key, anketaId, 0).Err()
-	if err != nil {
-		log.Printf("Ошибка сохранения ID анкеты по телефону: %v", err)
-		return err
+	// Сохраняем по телефону (если не пустой)
+	if phone != "" {
+		key = fmt.Sprintf("auth:phone:%s:anketa_id", phone)
+		log.Printf("Сохраняем ID анкеты по телефону: %s = %s", key, anketaId)
+		err = redisClient.Set(ctx, key, anketaId, 0).Err()
+		if err != nil {
+			log.Printf("Ошибка сохранения ID анкеты по телефону: %v", err)
+			return err
+		}
+	} else {
+		log.Printf("Телефон пустой, пропускаем сохранение по телефону")
 	}
 	
 	log.Printf("ID анкеты успешно сохранен по всем типам учетных данных")
