@@ -19,37 +19,37 @@ func NewUserService(repo domain.UserRepo) domain.UserService {
 	return UserServiceImpl{repo}
 }
 
-func (s UserServiceImpl) Register(login, email, phone, password string) error {
+func (s UserServiceImpl) Register(login, email, phone, password string) (uuid.UUID, error) {
 	loginVO, err := valueObjects.NewLogin(login)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	emailVO, err := valueObjects.NewEmail(email)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	phoneVO, err := valueObjects.NewPhone(phone)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	passwordVO, err := valueObjects.NewPassword(password)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	if exists, _ := s.repo.ExistsByLogin(loginVO.String()); exists {
-		return errs.ErrLoginAlreadyExists
+		return uuid.Nil, errs.ErrLoginAlreadyExists
 	}
 
 	if exists, _ := s.repo.ExistsByEmail(emailVO.String()); exists {
-		return errs.ErrEmailAlreadyExists
+		return uuid.Nil, errs.ErrEmailAlreadyExists
 	}
 
 	if exists, _ := s.repo.ExistsByPhone(phoneVO.String()); exists {
-		return errs.ErrPhoneAlreadyExists
+		return uuid.Nil, errs.ErrPhoneAlreadyExists
 	}
 
 	user := domain.NewUser(loginVO, passwordVO, phoneVO, emailVO)
@@ -58,20 +58,27 @@ func (s UserServiceImpl) Register(login, email, phone, password string) error {
 		Email    string
 		Phone    string
 		Password string
+		UserId   string `json:"user_id"`
 	}
 	userStrings.Email = user.Email.String()
 	userStrings.Phone = user.PhoneNumber.String()
 	userStrings.Login = user.Login.String()
 	userStrings.Password = user.PasswordHash.String()
+	userStrings.UserId = user.ID.String()
 
 	dataToSend, err := json.Marshal(userStrings)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	http.Post("http://localhost:8001/userReg", "application/json", bytes.NewBuffer(dataToSend))
 
-	return s.repo.Create(user)
+	err = s.repo.Create(user)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return user.ID, nil
 }
 
 func (s UserServiceImpl) Login(login, password string) (string, error) {

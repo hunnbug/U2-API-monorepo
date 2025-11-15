@@ -5,11 +5,62 @@ import (
 	"log"
 	"time"
 	"user-service/domain"
+	"user-service/valueObjects"
 
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
+// UserDTO - DTO для MongoDB
+type UserDTO struct {
+	ID           string `bson:"id"`
+	Login        string `bson:"login"`
+	Email        string `bson:"email"`
+	PhoneNumber  string `bson:"phone_number"`
+	PasswordHash string `bson:"password_hash"`
+}
+
+// convertDTOToUser - конвертирует UserDTO в domain.User
+func convertDTOToUser(dto UserDTO) (domain.User, error) {
+	// Парсим UUID
+	userID, err := uuid.Parse(dto.ID)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	// Создаем value objects
+	loginVO, err := valueObjects.NewLogin(dto.Login)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	emailVO, err := valueObjects.NewEmail(dto.Email)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	phoneVO, err := valueObjects.NewPhone(dto.PhoneNumber)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	passwordVO, err := valueObjects.NewPassword(dto.PasswordHash)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	// Создаем domain.User
+	user := domain.User{
+		ID:           userID,
+		Login:        loginVO,
+		Email:        emailVO,
+		PhoneNumber:  phoneVO,
+		PasswordHash: passwordVO,
+	}
+
+	return user, nil
+}
 
 type MongoUserRepo struct {
 	collection *mongo.Collection
@@ -79,18 +130,42 @@ func (m *MongoUserRepo) FindByID(id uuid.UUID) (domain.User, error) {
 	ctx, cancel := m.GetContext()
 	defer cancel()
 
-	var user domain.User
-	err := m.collection.FindOne(ctx, bson.M{"id": id}).Decode(&user)
-	return user, err
+	var userDTO UserDTO
+	err := m.collection.FindOne(ctx, bson.M{"id": id.String()}).Decode(&userDTO)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	log.Printf("Найден пользователь DTO: %+v\n", userDTO)
+
+	// Конвертируем DTO в domain.User
+	user, err := convertDTOToUser(userDTO)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	log.Println("\n\nКонвертированный пользователь:", user)
+
+	return user, nil
 }
 
 func (m *MongoUserRepo) FindByLogin(login string) (domain.User, error) {
 	ctx, cancel := m.GetContext()
 	defer cancel()
 
-	var user domain.User
-	err := m.collection.FindOne(ctx, bson.M{"login": login}).Decode(&user)
-	return user, err
+	var userDTO UserDTO
+	err := m.collection.FindOne(ctx, bson.M{"login": login}).Decode(&userDTO)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	// Конвертируем DTO в domain.User
+	user, err := convertDTOToUser(userDTO)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return user, nil
 }
 
 func (m *MongoUserRepo) ExistsByEmail(email string) (bool, error) {

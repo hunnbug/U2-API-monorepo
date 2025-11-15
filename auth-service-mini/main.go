@@ -22,7 +22,12 @@ func main() {
 	router.POST("/login", login)
 	router.POST("/verify", verifyToken)
 	router.POST("/saveAnketaId", saveAnketaId)
-	router.GET("/getAnketaId/:login", getAnketaId)
+	router.POST("/saveAnketaIdToAll", saveAnketaIdToAll)
+	router.POST("/getAnketaId", getAnketaId)
+	router.POST("/getAllUserCreds", getAllUserCredsHandler)
+	router.POST("/saveUserId", saveUserId)
+	router.POST("/saveUserIdToAll", saveUserIdToAll)
+	router.POST("/getUserId", getUserId)
 
 	err = router.Run("127.0.0.1:8001")
 	if err != nil {

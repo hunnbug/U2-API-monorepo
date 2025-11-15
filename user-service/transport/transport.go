@@ -32,7 +32,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	err := h.userService.Register(request.Login, request.Email, request.Phone, request.Password)
+	userID, err := h.userService.Register(request.Login, request.Email, request.Phone, request.Password)
 	if err != nil {
 		switch err {
 		case errs.ErrLoginAlreadyExists, errs.ErrEmailAlreadyExists, errs.ErrPhoneAlreadyExists:
@@ -46,7 +46,10 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"status": "Пользователь успешно создан"})
+	c.JSON(http.StatusCreated, gin.H{
+		"status": "Пользователь успешно создан",
+		"user_id": userID.String(),
+	})
 }
 
 func (h *UserHandler) Login(c *gin.Context) {
@@ -178,7 +181,19 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	type userDTO struct {
+		ID string `json:"id"`
+		Login string `json:"login"`
+		Email string `json:"email"`
+		PhoneNumber string `json:"phone_number"`
+	}
+
+	c.JSON(http.StatusOK, userDTO{
+		ID: user.ID.String(),
+		Login: user.Login.String(),
+		Email: user.Email.String(),
+		PhoneNumber: user.PhoneNumber.String(),
+	})
 }
 
 func (h *UserHandler) CheckLoginExists(c *gin.Context) {

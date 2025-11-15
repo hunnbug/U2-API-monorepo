@@ -8,11 +8,11 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID
-	Login        valueObjects.Login
-	PasswordHash valueObjects.Password
-	PhoneNumber  valueObjects.Phone
-	Email        valueObjects.Email
+	ID           uuid.UUID `bson:"id"`
+	Login        valueObjects.Login `bson:"login"`
+	PasswordHash valueObjects.Password `bson:"password_hash"`
+	PhoneNumber  valueObjects.Phone `bson:"phone_number"`
+	Email        valueObjects.Email `bson:"email"`
 }
 
 func NewUser(login valueObjects.Login, password valueObjects.Password, phone valueObjects.Phone, email valueObjects.Email) User {
